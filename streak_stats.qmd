@@ -1,0 +1,272 @@
+---
+title: "streak_stats"
+format: html
+editor: visual
+---
+
+```{r}
+# function that returns basic streak statistics given a sequence
+streak_stats = function(results_sequence, streak_length){
+  n_trials = length(results_sequence)
+  n_success = sum(results_sequence)
+  
+  run_lengths = rle(results_sequence)$lengths
+  if_run_success = rle(results_sequence)$values
+  n_runs = length(run_lengths)
+  
+  # runs of successes
+  longest_run_success = max(run_lengths*if_run_success)
+  n_runs_success = sum(if_run_success)
+  
+  # successes after streaks of Successes
+  run_lengths_adj = run_lengths - streak_length + 1
+  run_values_adj_S =
+    if_run_success *
+    (!((if_run_success == 1) &
+         (run_lengths < streak_length)))
+  n_after_Sstreak = sum(run_lengths_adj * run_values_adj_S) -
+    run_values_adj_S[length(run_values_adj_S)]
+  n_success_after_Sstreak = sum((run_lengths - streak_length) * run_values_adj_S)
+  
+  # runs of failures
+  longest_run_failure = max(run_lengths*(1-if_run_success))
+  n_runs_failure = sum(1-if_run_success)
+  
+  # successes after streaks of Failures
+  run_values_adj_F =
+    (1-if_run_success) *
+    (!((if_run_success == 0) &
+         (run_lengths < streak_length)))
+  n_after_Fstreak = sum(run_lengths_adj * run_values_adj_F) -
+    run_values_adj_F[length(run_values_adj_F)]
+  n_success_after_Fstreak = n_after_Fstreak -
+    sum((run_lengths - streak_length) * run_values_adj_F)
+  
+  # Proportion of hits on trials after streaks
+  phat_after_Sstreak = n_success_after_Sstreak / n_after_Sstreak
+  
+  # Difference in proportion of hits (trials after streaks - all other trials)
+  phat_after_no_Sstreak = (n_success - n_success_after_Sstreak)/
+    (n_trials - n_after_Sstreak)
+  phat_Sstreak_vs_others = phat_after_Sstreak - phat_after_no_Sstreak
+  
+  # Difference in proportion of hits (trials after hit streaks - trials after miss streaks)
+  phat_after_Fstreak = n_success_after_Fstreak / n_after_Fstreak
+  phat_Sstreak_vs_Fstreak = phat_after_Sstreak - phat_after_Fstreak
+  
+  # Hit streak frequency - proportion of trials that occur after hit streaks
+  Sstreak_frequency  = n_after_Sstreak / (n_trials - streak_length)
+  
+  # collect the streak stats for the results sequence
+  return(data.frame(phat_after_Sstreak,
+                    phat_Sstreak_vs_others,
+                    phat_Sstreak_vs_Fstreak,
+                    Sstreak_frequency,
+                    longest_run_success,
+                    n_runs
+                    #                     n_runs_success,
+                    #                     phat_after_Fstreak,
+                    #                     n_runs_failure,
+                    #                     longest_run_failure,
+  ))
+}
+```
+
+
+### All Shot Vectors
+
+Function that loops through all season-long shot vectors and analyzes them
+```{r}
+analyze_all_shot_vectors <- function(all_shot_vectors, streak_length = 3) {
+  
+  results <- list()
+  idx <- 1
+  
+  for (season in names(all_shot_vectors)) {
+    for (player in names(all_shot_vectors[[season]])) {
+      
+      shots <- all_shot_vectors[[season]][[player]]
+      
+      # Skip sequences too short for streak analysis
+      if (length(shots) <= streak_length) next
+      
+      stats <- streak_stats(shots, streak_length)
+      
+      results[[idx]] <- cbind(
+        season = season,
+        player = player,
+        n_shots = length(shots),
+        stats
+      )
+      
+      idx <- idx + 1
+    }
+  }
+  
+  do.call(rbind, results)
+}
+```
+
+Using above function
+```{r}
+season_level_results <- analyze_all_shot_vectors(
+  all_shot_vectors,
+  streak_length = 3
+)
+```
+
+
+```{r}
+# One player-season
+subset(
+  season_level_results,
+  season == "2005" & player == "Gilbert Arenas"
+)
+
+# Distribution of hot-hand effect
+summary(season_level_results$phat_Sstreak_vs_Fstreak)
+
+```
+Check missing player-seasons:
+
+```{r}
+season_level_results %>%
+  count(season)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+### 2025
+
+```{r}
+run_streak_stats_for_all <- function(streak_length = 3) {
+  
+  # Find all shot vectors matching your pattern
+  shot_objs <- ls(pattern = "_shots_24_25$", envir = .GlobalEnv)   # << updated pattern
+  
+  # Apply streak_stats() to each one
+  results <- setNames(
+    lapply(shot_objs, function(obj_name) {
+      streak_stats(get(obj_name, envir = .GlobalEnv), streak_length)
+    }),
+    shot_objs
+  )
+  
+  return(results)
+}
+```
+
+```{r}
+# Storing all streak statistic data for every player in vector
+streak_results_2025 <- run_streak_stats_for_all()
+```
+
+```{r}
+make_streak_summary_table <- function(streak_results, season_label = "2024-25") {
+  
+  clean_name <- function(raw) {
+    # Step 1: remove trailing "_shots_24_25"
+    name <- sub("_shots_24_25$", "", raw)
+    # Step 2: remove the "2025" part
+    name <- sub("2025$", "", name)
+    # Step 3: insert space before capital letters (first name + last name)
+    name <- gsub("([a-z])([A-Z])", "\\1 \\2", name)
+    
+    return(name)
+  }
+  
+  df_list <- lapply(names(streak_results), function(player_obj_name) {
+    
+    stats <- streak_results[[player_obj_name]]
+    stats_df <- as.data.frame(as.list(stats))
+    
+    stats_df$player <- clean_name(player_obj_name)
+    stats_df$season <- season_label
+    
+    return(stats_df)
+  })
+  
+  final_df <- do.call(rbind, df_list)
+  final_df <- final_df[, c("player", "season", setdiff(names(final_df), c("player", "season")))]
+  
+  return(final_df)
+}
+
+```
+
+```{r}
+streak_summary_2025 <- make_streak_summary_table(streak_results_2025)
+
+```
+
+### 2024
+
+```{r}
+run_streak_stats_for_all <- function(streak_length = 3) {
+  
+  # Find all shot vectors matching your pattern
+  shot_objs <- ls(pattern = "_shots_23_24$", envir = .GlobalEnv)   # << updated pattern
+  
+  # Apply streak_stats() to each one
+  results <- setNames(
+    lapply(shot_objs, function(obj_name) {
+      streak_stats(get(obj_name, envir = .GlobalEnv), streak_length)
+    }),
+    shot_objs
+  )
+  
+  return(results)
+}
+```
+
+```{r}
+# Storing all streak statistic data for every player in vector
+streak_results_2024 <- run_streak_stats_for_all()
+```
+
+```{r}
+make_streak_summary_table <- function(streak_results, season_label = "2023-24") {
+  
+  clean_name <- function(raw) {
+    # Step 1: remove trailing "_shots_24_25"
+    name <- sub("_shots_23_24$", "", raw)
+    # Step 2: remove the "2024" part
+    name <- sub("2024$", "", name)
+    # Step 3: insert space before capital letters (first name + last name)
+    name <- gsub("([a-z])([A-Z])", "\\1 \\2", name)
+    
+    return(name)
+  }
+  
+  df_list <- lapply(names(streak_results), function(player_obj_name) {
+    
+    stats <- streak_results[[player_obj_name]]
+    stats_df <- as.data.frame(as.list(stats))
+    
+    stats_df$player <- clean_name(player_obj_name)
+    stats_df$season <- season_label
+    
+    return(stats_df)
+  })
+  
+  final_df <- do.call(rbind, df_list)
+  final_df <- final_df[, c("player", "season", setdiff(names(final_df), c("player", "season")))]
+  
+  return(final_df)
+}
+
+```
+
+```{r}
+streak_summary_2024 <- make_streak_summary_table(streak_results_2024)
+```

@@ -1,0 +1,1735 @@
+---
+title: "HotHandR"
+name: "Cameron An"
+format: html
+editor: visual
+---
+
+## Reading in Player Totals by Season
+
+```{r}
+# Loading packages
+library(broom)
+library(dplyr)
+library(forcats)
+library(ggplot2)
+library(here)
+library(hoopR)
+library(knitr)
+library(tidyverse)
+library(stringr)
+library(tidyr)
+library(purrr)
+library(stringr)
+library(stringi)
+library(kableExtra)
+```
+
+```{r}
+# Function to read in all player total data from all seasons
+
+read_and_assign_player_totals <- function(start_year = 2001, end_year = 2024) {
+  for (year in start_year:end_year) {
+    next_year <- year + 1
+    season <- sprintf("%02d-%02d", year %% 100, next_year %% 100)
+    file_name <- paste0(season, "PlayerData.csv")
+    file_path <- here::here("Data", file_name)
+
+    if (file.exists(file_path)) {
+      # For 2000–01 through 2002–03 → normal header
+      # For 2003–04 and later → skip first line, use second as header
+      if (year < 2003) {
+        data <- read.csv(file_path, header = TRUE)
+      } else {
+        # Read first two lines separately to get proper column names
+        header_lines <- readLines(file_path, n = 2)
+        header <- strsplit(header_lines[2], ",")[[1]]
+        data <- read.csv(file_path, skip = 2, header = FALSE)
+        names(data) <- header
+      }
+
+      # Assign dynamically to global environment
+      var_name <- paste0("playerTotals", season)
+      assign(var_name, data, envir = .GlobalEnv)
+      message("Loaded: ", var_name)
+
+    } else {
+      warning("File not found: ", file_name)
+    }
+  }
+}
+
+read_and_assign_player_totals()
+```
+
+## Cleaning Data for Player Selection
+
+Data Cleaning:
+
+```{r}
+# renaming X3PA columns to just 3PA for some datasets
+`playerTotals01-02` <- `playerTotals01-02` |>
+  rename(`3PA` = X3PA)
+
+`playerTotals02-03` <- `playerTotals02-03` |>
+  rename(`3PA` = X3PA)
+
+`playerTotals01-02` <- `playerTotals01-02` |>
+  rename(`3P` = X3P)
+
+`playerTotals02-03` <- `playerTotals02-03` |>
+  rename(`3P` = X3P)
+
+# removing data sets with "League Average" row, converting stats to numeric variables
+clean_player_totals_datasets <- function(start_year = 2002, end_year = 2024) {
+  for (year in start_year:end_year) {
+    next_year <- year + 1
+    season <- sprintf("%02d-%02d", year %% 100, next_year %% 100)
+    var_name <- paste0("playerTotals", season)
+
+    if (exists(var_name, envir = .GlobalEnv)) {
+      data <- get(var_name, envir = .GlobalEnv)
+
+      # Remove row with "League Average"
+      data <- dplyr::filter(data, Player != "League Average")
+
+      # Convert columns 6–31 to numeric (suppress warnings for non-numeric strings)
+      data[, 6:31] <- lapply(data[, 6:31], function(x) as.numeric(as.character(x)))
+
+      # Assign cleaned data back to global environment
+      assign(var_name, data, envir = .GlobalEnv)
+      message("Cleaned: ", var_name)
+    } else {
+      warning("Dataset not found: ", var_name)
+    }
+  }
+}
+
+clean_player_totals_datasets()
+```
+
+Making sure that only one of each player appears in the totals datasets
+
+```{r}
+# function that only keeps combined player totals for players that played for multiple teams
+keep_2TM_rows <- function(df) {
+  df %>%
+    dplyr::group_by(Player) %>%
+    dplyr::filter(
+      if (any(Team == "2TM")) {
+        Team == "2TM"
+      } else {
+        TRUE
+      }
+    ) %>%
+    dplyr::ungroup()
+}
+
+playerTotals_names <- ls(pattern = "^playerTotals")
+
+updated_list <- lapply(playerTotals_names, function(name) {
+  df <- get(name)
+  keep_2TM_rows(df)
+})
+
+names(updated_list) <- playerTotals_names
+
+# write back to global environment
+list2env(updated_list, envir = .GlobalEnv)
+
+```
+
+Filtering Data by top 30 shooters in 3PA per season
+
+```{r}
+create_top30_3pa_datasets <- function(start_year = 2001, end_year = 2024) {
+  for (year in start_year:end_year) {
+    next_year <- year + 1
+    season <- sprintf("%02d-%02d", year %% 100, next_year %% 100)
+
+    # Dataset names
+    totals_name <- paste0("playerTotals", season)
+    new_name <- paste0("players", season, "_top30_3PA")
+
+    # Check if the dataset exists
+    if (exists(totals_name, envir = .GlobalEnv)) {
+      data <- get(totals_name, envir = .GlobalEnv)
+
+      # Ensure required columns exist
+      required_cols <- c("Player", "Age", "Team", "Pos", "3PA")
+      missing_cols <- setdiff(required_cols, names(data))
+      if (length(missing_cols) > 0) {
+        warning("Skipping ", totals_name, ": missing columns ", paste(missing_cols, collapse = ", "))
+        next
+      }
+
+      # Select relevant columns and get top 30 shooters
+      top30 <- data |>
+        dplyr::select(Player, Age, Team, Pos, `3PA`, `3P`) |>
+        dplyr::arrange(desc(`3PA`)) |>
+        dplyr::slice_head(n = 30)
+
+      # Assign result to global environment
+      assign(new_name, top30, envir = .GlobalEnv)
+      message("Created: ", new_name)
+    } else {
+      warning("Dataset not found: ", totals_name)
+    }
+  }
+}
+
+create_top30_3pa_datasets()
+```
+
+Fixing Special Characters in Names for top 30 3PA
+
+```{r}
+# transforming c's with accent to just regular c
+# All seasons from 01-02 to 24-25
+seasons <- c(
+  "01-02", "02-03", "03-04", "04-05", "05-06", "06-07", 
+  "07-08", "08-09", "09-10", "10-11", "11-12", "12-13", 
+  "13-14", "14-15", "15-16", "16-17", "17-18", "18-19", 
+  "19-20", "20-21", "21-22", "22-23", "23-24", "24-25"
+)
+
+for (s in seasons) {
+  df_name <- paste0("players", s, "_top30_3PA")
+  
+  if (exists(df_name)) {
+    df <- get(df_name)
+    
+    if ("Player" %in% names(df)) {
+      # Convert encoding to UTF-8 safely
+      df$Player <- iconv(df$Player, from = "", to = "UTF-8", sub = "byte")
+      
+      # Replace "?" with "c"
+      df$Player <- gsub("\\?", "c", df$Player)
+      
+      # Save back to the environment
+      assign(df_name, df, envir = .GlobalEnv)
+      
+      message(paste("Cleaned:", df_name))
+    } else {
+      message(paste(df_name, "has no 'Player' column — skipped."))
+    }
+  } else {
+    message(paste(df_name, "not found — skipped."))
+  }
+}
+
+```
+
+## Getting Qualified Players
+
+```{r}
+assign_ind_top_players <- function(seasons) {
+  for (season in seasons) {
+    source_name <- paste0("players", season, "_top30_3PA")
+    target_name <- paste0("players", gsub("-", "_", season), "Ind")
+    
+    assign(
+      target_name,
+      get(source_name)$Player,
+      envir = .GlobalEnv
+    )
+  }
+}
+
+assign_ind_top_players(seasons)
+```
+
+### Cleaning Event Data
+
+Gathering Player ID's to make filtering easier
+```{r}
+nba_pbp2024 <- hoopR::load_nba_pbp(season = 2024) #%>%
+  #filter(grepl("Tim Hardaway", text, ignore.case = TRUE))
+
+
+# Creating dataset to help with gathering player IDs
+id_lookup_01_02 <- nba_pbp2002 %>%
+  mutate(
+    text = str_remove(text, "\\(.*")
+  ) %>%
+  filter(
+    shooting_play == TRUE,
+    str_detect(text, paste(players01_02Ind, collapse = "|"))
+  ) %>%
+  mutate(
+    player = str_extract(text, paste(players01_02Ind, collapse = "|"))
+  ) %>%
+  select(player, athlete_id_1) %>%
+  #distinct() %>%
+  arrange(player)
+
+```
+
+```{r}
+# gathering player IDs
+get_player_ids <- function(id_lookup_df, min_n = 100) {
+  
+  ids <- id_lookup_df %>%
+    count(athlete_id_1) %>%
+    filter(n > min_n) %>%
+    pull(athlete_id_1)
+  
+  return(ids)
+}
+
+ids01_02 <- get_player_ids(id_lookup_01_02, min_n = 100)
+```
+
+```{r}
+id_lookup_01_02_summary <- id_lookup_01_02 %>%
+  count(player, athlete_id_1, name = "count") %>%
+  arrange(player, desc(count))
+
+```
+
+```{r}
+ids_list <- list(
+  "2002" = ids01_02,
+  "2003" = ids02_03,
+  "2004" = ids03_04,
+  "2005" = ids04_05,
+  "2006" = ids05_06,
+  "2007" = ids06_07,
+  "2008" = ids07_08,
+  "2009" = ids08_09,
+  "2010" = ids09_10,
+  "2011" = ids10_11,
+  "2012" = ids11_12,
+  "2013" = ids12_13,
+  "2014" = ids13_14,
+  "2015" = ids14_15,
+  "2016" = ids15_16,
+  "2017" = ids16_17,
+  "2018" = ids17_18,
+  "2019" = ids18_19,
+  "2020" = ids19_20,
+  "2021" = ids20_21,
+  "2022" = ids21_22,
+  "2023" = ids22_23,
+  "2024" = ids23_24,
+  "2025" = ids24_25
+)
+
+all_ids_df <- bind_rows(
+  lapply(names(ids_list), function(season) {
+    data.frame(
+      season = season,
+      athlete_id = ids_list[[season]]
+    )
+  }),
+  .id = "season_index"  # optional, removes automatic row numbering
+) %>%
+  select(-season_index) %>%  # remove if not needed
+  arrange(as.integer(season), athlete_id)
+
+```
+
+
+```{r}
+# Did 01-02 season manually
+ids01_02 <- c(349,881,194,42,63,913,
+              26,714,566,24,246,609,
+              402,429,841,933,800,868,
+              264,662,813,703,469,883,
+              9,552,592,301,136,655)
+
+# Did 24-25 season manually
+ids24_25 <- c(4594268,3975,3907822,4065648,3078576,4395725,
+              3992,4437244,4277905,3908809,4066354,4277956,
+              4351851,4395651,4396993,6475,3136193,2990984,
+              3064440,4066457,4396907,4432816,6606,4433627,
+              4278104,3157465,3945274,4592479,4431678,4914336)
+```
+
+```{r}
+#season 2024-25
+nba_pbp2025 <- hoopR::load_nba_pbp(season = 2025) |>
+  filter(grepl("Anthony Edwards", text, ignore.case = TRUE)) |>
+  mutate(distance = as.numeric(str_extract(text, "\\d+(?=-foot)"))) |>
+  filter(score_value != 2) |>
+  filter(is.na(distance)) |>
+  filter(!grepl("rebound", type_text, ignore.case = TRUE),
+         !grepl("turnover", type_text, ignore.case = TRUE),
+         !grepl("layup", type_text, ignore.case = TRUE),
+         !grepl("foul", type_text, ignore.case = TRUE),
+         !grepl("free throw", type_text, ignore.case = TRUE),
+         !grepl("substitution", type_text, ignore.case = TRUE),
+         !grepl("jumpball", type_text, ignore.case = TRUE),
+         !grepl("tip", type_text, ignore.case = TRUE),
+         !grepl("kicked", type_text, ignore.case = TRUE),
+         !grepl("jumpball", type_text, ignore.case = TRUE),
+         !grepl("charge", type_text, ignore.case = TRUE),
+         !grepl("goaltending", type_text, ignore.case = TRUE),
+         !grepl("dunk", type_text, ignore.case = TRUE),
+         !grepl("ejection", type_text, ignore.case = TRUE),
+         !grepl("lane", type_text, ignore.case = TRUE),
+         !grepl("traveling", type_text, ignore.case = TRUE),
+         !grepl("hook", type_text, ignore.case = TRUE),
+         !grepl("two point", text, ignore.case = TRUE),
+         )
+```
+
+```{r}
+nba_pbp2024 <- hoopR::load_nba_pbp(season = 2024) 
+
+nba_pbp2025 <- nba_pbp2025 |>
+  filter(athlete_id_1 %in% ids24_25) |>
+  mutate(distance = as.numeric(str_extract(text, "\\d+(?=-foot)"))) |>
+  #mutate(text = gsub("\\s*\\(.*", "", text)) |>   #remove everything from '(' onward
+  filter(grepl("three point", text, ignore.case = TRUE) | 
+        (grepl("running pullup", text, ignore.case = TRUE) & distance >= 22) |
+        (grepl("driving floating", text, ignore.case = TRUE) & distance >= 22) |
+         distance >= 22 |
+         score_value == 3
+         )|>
+  #filter(grepl(paste(players24_25Ind, collapse = "|"), text, ignore.case = TRUE)) |>
+  filter(season_type == 2) |>
+  select(-away_score, -home_score, -period_display_value, -score_value, -wallclock, -coordinate_x_raw, -coordinate_y_raw, -game_spread, -home_favorite, -game_spread_available, -home_team_spread, -home_timeout_called, -away_timeout_called, -half, -game_half, -lead_qtr, -lead_half, -start_quarter_seconds_remaining, -start_half_seconds_remaining, -start_game_seconds_remaining)
+```
+
+
+
+Removing rows where the shooter is blocking someone else
+
+```{r}
+nba_pbp2025 <- nba_pbp2025 |>
+  # remove rows where the shooter is blocking someone else
+  filter(!(
+    grepl("blocks", text, ignore.case = TRUE) &
+    sapply(players24_25Ind, function(player) grepl(player, text, ignore.case = TRUE)) %>% rowSums() > 0
+  ))
+
+```
+
+Creating data sets for each player's shots for 24-25 season
+
+```{r}
+get_player_shots <- function(data, player_name) {
+  data %>%
+    filter(grepl(player_name, text, ignore.case = TRUE)) %>%
+    arrange(game_date, qtr, desc(end_quarter_seconds_remaining))
+}
+
+for (player in players24_25Ind) {
+  # create a safe variable name (remove spaces, punctuation, etc.)
+  clean_name <- gsub("[^A-Za-z]", "", player)
+  
+  # create dataset name, e.g. "AnthonyEdwards2025"
+  dataset_name <- paste0(clean_name, "2025")
+  
+  # assign the filtered dataset to that name in the global environment
+  assign(dataset_name, get_player_shots(nba_pbp2025, player))
+}
+
+ls(pattern = "2025$")
+
+```
+
+Anthony Edwards 2024-25 shots vector:
+
+```{r}
+# Create a vector of 1s and 0s from the scoring_play column
+`AnthonyEdwards_shots_24-25` <- ifelse(AnthonyEdwards2025$scoring_play, 1, 0)
+`StephenCurry_shots_24-25` <- ifelse(StephenCurry2025$scoring_play, 1, 0)
+`ShaedonSharpe_shots_24-25` <- ifelse(ShaedonSharpe2025$scoring_play, 1, 0)
+
+```
+
+## Plots
+
+Reading in data:
+
+```{r}
+SeasonAvgs <- read.csv(here::here("Data",
+                                    "OverallAveragesBySeason.csv"
+                                    )
+                              )
+
+SeasonAvgs <- na.omit(SeasonAvgs)
+SeasonAvgs <- SeasonAvgs |>
+  filter(Season != "2025-26",
+         Season != "1999-00",
+         Season != "2000-01")
+```
+
+```{r}
+SeasonTotals <- read.csv(here::here("Data",
+                                    "TotalsBySeason.csv"
+                                    )
+                              )
+
+SeasonTotals <- SeasonTotals %>%
+  mutate(
+    # Extract last two digits after the dash
+    end_two = str_sub(Season, 6, 7),
+    
+    # Convert to numeric year (assume all seasons end after 1999)
+    season_end = ifelse(
+      as.numeric(end_two) <= 30,       # 00–30 → 2000–2030
+      2000 + as.numeric(end_two),
+      1900 + as.numeric(end_two)       # 31–99 → 1931–1999 (won't apply to NBA modern data)
+    )
+  ) |>
+  filter(Season != "1999-00",
+         Season != "2000-01")
+```
+
+Season vs. League Average 3P%
+
+```{r}
+SeasonAvgs <- SeasonAvgs %>%
+  mutate(
+    # Extract last two digits after the dash
+    end_two = str_sub(Season, 6, 7),
+    
+    # Convert to numeric year (assume all seasons end after 1999)
+    season_end = ifelse(
+      as.numeric(end_two) <= 30,       # 00–30 → 2000–2030
+      2000 + as.numeric(end_two),
+      1900 + as.numeric(end_two)       # 31–99 → 1931–1999 (won't apply to NBA modern data)
+    )
+  )
+
+ggplot(SeasonAvgs, aes(x = season_end, y = X3P.)) +
+  geom_point() +
+  geom_line(alpha = 0.4) +
+  geom_smooth(
+    method = "loess",
+    se = F,
+    linewidth = 1.2
+  ) + 
+  labs(
+    x = "Season (End Year)",
+    y = "League 3P%",
+    title = "League-Wide 3-Point Percentage by Season"
+  ) +
+  theme_minimal() +
+  coord_cartesian(xlim = c(2003, 2025))
+```
+
+Season vs. League Average 3P Attempts per Game
+
+```{r}
+ggplot(SeasonAvgs, aes(x = season_end, y = X3PA)) +
+  geom_point() +
+  geom_line(alpha = 0.4) +
+  geom_smooth(method = "loess", se = FALSE, linewidth = 1.2) +
+  labs(
+    x = "Season (End Year)",
+    y = "League 3PA per Game",
+    title = "League-Wide 3-Point Attempts per Game by Season",
+    subtitle = "Season is denoted as end year of season (Ex: 2025 = 2024-25)"
+  ) +
+  scale_y_continuous(breaks = seq(10, 40, by = 5)) + 
+  theme_minimal() +
+  coord_cartesian(xlim = c(2003, 2025))
+```
+
+Share of League 3PA Taken by Top Shooters by Season
+
+```{r}
+library(dplyr)
+library(stringr)
+library(ggplot2)
+
+# Identify all top-30 shooter datasets
+top30_objs <- ls(pattern = "^players\\d{2}-\\d{2}_top30_3PA$")
+
+top30_summary <- lapply(top30_objs, function(obj) {
+  
+  df <- get(obj)
+  
+  tibble(
+    Season = str_sub(obj, 8, 12),      # extract "01-02"
+    top30_3PA = sum(df$`3PA`, na.rm = TRUE)
+  )
+}) %>%
+  bind_rows() %>%
+  mutate(
+    # Convert "01-02" → "2001-02"
+    Season = paste0("20", Season)
+  )
+
+# Join with league totals
+top30_share <- top30_summary %>%
+  left_join(SeasonTotals, by = "Season") %>%
+  mutate(
+    top30_share = top30_3PA / X3PA
+  ) |>
+  filter(Season != "2000-01",
+         Season != "2099-00")
+
+```
+
+```{r}
+ggplot(top30_share, aes(x = season_end, y = top30_share, group = 1)) +
+  geom_line(alpha = 0.4) +
+  geom_point() +
+  geom_smooth(method = "loess", se = FALSE, linewidth = 1.2) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  labs(
+    title = "Share of League-Wide 3-Point Attempts Taken by Top 30 Shooters",
+    subtitle = "Top 30 shooters defined by total 3PA each season",
+    x = "Season (End Year)",
+    y = "Percent of League 3PA"
+  ) +
+  theme_minimal()
+
+```
+
+Era-Shaded 3PA Plot
+
+```{r}
+# defining Eras
+era_df <- data.frame(
+  era = factor(
+    c("Early 3PT Era", "Analytics Transition", "Modern 3PT Explosion"),
+    levels = c("Early 3PT Era", "Analytics Transition", "Modern 3PT Explosion")
+  ),
+  xmin = c(2002, 2010, 2016),
+  xmax = c(2010, 2016, max(SeasonAvgs$season_end))
+)
+
+```
+
+```{r}
+ggplot(SeasonAvgs, aes(x = season_end, y = X3PA)) +
+  
+  # Era shading with legend
+  geom_rect(
+    data = era_df,
+    aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf, fill = era),
+    inherit.aes = FALSE,
+    alpha = 0.25
+  ) +
+  
+  # Data layers
+  geom_point(size = 2) +
+  geom_line(alpha = 0.4) +
+  geom_smooth(method = "loess", se = FALSE, linewidth = 1.2) +
+  
+  scale_fill_manual(
+    values = c(
+      "Early 3PT Era" = "#A6CEE3",
+      "Analytics Transition" = "#B2DF8A",
+      "Modern 3PT Explosion" = "#FB9A99"
+    ),
+    name = "Three-Point Era"
+  ) +
+  
+  labs(
+    x = "Season (End Year)",
+    y = "League Average 3PA per Game",
+    title = "League-Wide Three-Point Attempts per Game by Season"
+  ) +
+  
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    legend.title = element_text(size = 10)
+  ) + 
+
+  coord_cartesian(xlim = c(2003, 2025)) +
+  scale_y_continuous(breaks = seq(15, 35, by = 5))
+
+```
+
+## Season-Long Trends
+
+### Season Shot Vectors
+```{r}
+pbp2007 <- hoopR::load_nba_pbp(season = 2007) |>
+  filter(grepl("manu", text, ignore.case = TRUE))
+```
+
+Cleaning Player Names:
+```{r}
+players16_17Ind[players16_17Ind == "Ersan clyasova"] <- "Ersan Ilyasova"
+players19_20Ind[players19_20Ind == "Dcvis Bertcns"] <- "Davis Bertans"
+players20_21Ind[players20_21Ind == "Dcvis Bertcns"] <- "Davis Bertans"
+players06_07Ind[players06_07Ind == "Manu Gin<f3>bili"] <- "Manu Ginobili"
+players07_08Ind[players07_08Ind == "Manu Gin<f3>bili"] <- "Manu Ginobili"
+players09_10Ind[players09_10Ind == "Manu Gin<f3>bili"] <- "Manu Ginobili"
+players10_11Ind[players10_11Ind == "Manu Gin<f3>bili"] <- "Manu Ginobili"
+players07_08Ind[players07_08Ind == "Hedo T<fc>rkoclu"] <- "Hedo Turkoglu"
+players08_09Ind[players08_09Ind == "Hedo T<fc>rkoclu"] <- "Hedo Turkoglu"
+players08_09Ind[players08_09Ind == "Rudy Fern<e1>ndez"] <- "Rudy Fernandez"
+players10_11Ind[players10_11Ind == "Rudy Fern<e1>ndez"] <- "Rudy Fernandez"
+players14_15Ind[players14_15Ind == "Greivis V<e1>squez"] <- "Greivis Vasquez"
+players13_14Ind[players13_14Ind == "Jos<e9> Calder<f3>n"] <- "Jose Calderon"
+
+
+players17_18Ind[players17_18Ind == "C.J. Miles"] <- "CJ Miles"
+players15_16Ind[players15_16Ind == "CJ McCollum"] <- "C.J. McCollum"
+players15_16Ind[players15_16Ind == "JJ Redick"] <- "J.J. Redick"
+players14_15Ind[players14_15Ind == "JJ Redick"] <- "J.J. Redick"
+players14_15Ind[players14_15Ind == "Lou Williams"] <- "Louis Williams"
+players12_13Ind[players12_13Ind == "JJ Redick"] <- "J.J. Redick"
+players11_12Ind[players11_12Ind == "JJ Redick"] <- "J.J. Redick"
+players08_09Ind[players08_09Ind == "Metta World Peace"] <- "Ron Artest"
+players01_02Ind[players01_02Ind == "Peja Stojakovic"] <- "Predrag Stojakovic"
+```
+
+Function to create season-long shot vectors:
+```{r}
+make_season_shot_vectors <- function(
+  season_year,
+  player_names,
+  k_text_patterns = "three point|three pointer"
+) {
+  
+  # Load play-by-play
+  pbp <- hoopR::load_nba_pbp(season = season_year)
+  
+  # Clean and filter to 3PA + regular season
+  pbp_3pa <- pbp %>%
+    mutate(text = str_remove(text, "\\s*\\(.*")) %>%
+    filter(
+      season_type == 2,
+      grepl(k_text_patterns, text, ignore.case = TRUE)
+    ) |>
+    mutate(
+    text = iconv(text, from = "", to = "UTF-8"),   # force UTF-8
+    text = stri_trans_general(text, "Latin-ASCII") # remove accents
+  ) |>
+    mutate(
+    text = text %>%
+      str_replace_all("J\\.J\\. Redick", "JJ Redick") %>%
+      str_replace_all("C\\.J\\. McCollum", "CJ McCollum") %>%
+      str_replace_all("\\bCJ Miles\\b", "C.J. Miles") %>%
+      str_replace_all("\\bLouis Williams\\b", "Lou Williams") %>%
+      str_replace_all("\\bRon Artest\\b", "Metta World Peace") %>%
+      str_replace_all("\\bPredrag Stojakovic\\b", "Peja Stojakovic")
+  )
+  
+  # Create empty list to store player vectors
+  shot_vectors <- vector("list", length(player_names))
+  names(shot_vectors) <- player_names
+  
+  # Loop over players
+  for (player in player_names) {
+    
+    # Identify shots where player is shooter (including blocks)
+    player_shots <- pbp_3pa %>%
+      filter(
+        grepl(player, text, ignore.case = TRUE)
+      ) %>%
+      arrange(game_date, sequence_number)
+    
+    # Create 0/1 shot vector
+    shot_vec <- ifelse(player_shots$scoring_play, 1L, 0L)
+    
+    shot_vectors[[player]] <- shot_vec
+  }
+  
+  return(shot_vectors)
+}
+```
+
+Creating shot vectors for top 30 players for each season:
+```{r}
+season_years <- 2002:2025
+player_lists <- list(
+  `2002` = players01_02Ind,
+  `2003` = players02_03Ind,
+  `2004` = players03_04Ind,
+  `2005` = players04_05Ind,
+  `2006` = players05_06Ind,
+  `2007` = players06_07Ind,
+  `2008` = players07_08Ind,
+  `2009` = players08_09Ind,
+  `2010` = players09_10Ind,
+  `2011` = players10_11Ind,
+  `2012` = players11_12Ind,
+  `2013` = players12_13Ind,
+  `2014` = players13_14Ind,
+  `2015` = players14_15Ind,
+  `2016` = players15_16Ind,
+  `2017` = players16_17Ind,
+  `2018` = players17_18Ind,
+  `2019` = players18_19Ind,
+  `2020` = players19_20Ind,
+  `2021` = players20_21Ind,
+  `2022` = players21_22Ind,
+  `2023` = players22_23Ind,
+  `2024` = players23_24Ind,
+  `2025` = players24_25Ind
+)
+
+all_shot_vectors <- vector("list", length(season_years))
+names(all_shot_vectors) <- season_years
+
+for (yr in season_years) {
+  all_shot_vectors[[as.character(yr)]] <-
+    make_season_shot_vectors(yr, player_lists[[as.character(yr)]])
+  
+  gc()  # critical to avoid crashes
+}
+
+# Ex: use all_shot_vectors[["2005"]][["Gilbert Arenas"]]
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+Function to create season-long shot vectors:
+```{r}
+make_season_shot_vectors_ids <- function(
+  season_year,
+  athlete_ids,       # vector of athlete_id_1 for this season
+  id_lookup_df       # dataframe with player names and athlete IDs
+) {
+  
+  # Load play-by-play
+  pbp <- hoopR::load_nba_pbp(season = season_year)
+  
+  # Filter to regular season shooting plays
+  pbp_shots <- pbp %>%
+    filter(
+      season_type == 2,        # regular season
+      shooting_play == TRUE
+    ) %>%
+    arrange(game_date, sequence_number)
+  
+  # Merge in id_lookup_df to attach athlete_id to each shot
+  # id_lookup_df should have columns: player, athlete_id_1
+  pbp_shots <- pbp_shots %>%
+    left_join(id_lookup_df, by = c("athlete_id_1"))
+  
+  # Create a list to store shot vectors
+  shot_vectors <- vector("list", length(athlete_ids))
+  names(shot_vectors) <- athlete_ids
+  
+  # Loop through each athlete_id
+  for (aid in athlete_ids) {
+    
+    # Get all shots by this athlete
+    athlete_shots <- pbp_shots %>%
+      filter(athlete_id_1 == aid)
+    
+    # 0/1 vector: 1 = made shot, 0 = missed
+    shot_vec <- ifelse(athlete_shots$scoring_play, 1L, 0L)
+    
+    shot_vectors[[as.character(aid)]] <- shot_vec
+  }
+  
+  return(shot_vectors)
+}
+
+```
+
+Creating shot vectors for top 30 players for each season:
+```{r}
+season_years <- 2002:2025
+player_lists <- list(
+  `2002` = players01_02Ind,
+  `2003` = players02_03Ind,
+  `2004` = players03_04Ind,
+  `2005` = players04_05Ind,
+  `2006` = players05_06Ind,
+  `2007` = players06_07Ind,
+  `2008` = players07_08Ind,
+  `2009` = players08_09Ind,
+  `2010` = players09_10Ind,
+  `2011` = players10_11Ind,
+  `2012` = players11_12Ind,
+  `2013` = players12_13Ind,
+  `2014` = players13_14Ind,
+  `2015` = players14_15Ind,
+  `2016` = players15_16Ind,
+  `2017` = players16_17Ind,
+  `2018` = players17_18Ind,
+  `2019` = players18_19Ind,
+  `2020` = players19_20Ind,
+  `2021` = players20_21Ind,
+  `2022` = players21_22Ind,
+  `2023` = players22_23Ind,
+  `2024` = players23_24Ind,
+  `2025` = players24_25Ind
+)
+
+all_shot_vectors_new <- vector("list", length(season_years))
+names(all_shot_vectors_new) <- season_years
+
+for (yr in season_years) {
+  all_shot_vectors_new[[as.character(yr)]] <-
+    make_season_shot_vectors_ids(yr, player_lists[[as.character(yr)]])
+  
+  gc()  # critical to avoid crashes
+}
+
+# Ex: use all_shot_vectors[["2005"]][["Gilbert Arenas"]]
+```
+
+
+## Streak Statistics
+
+```{r}
+# function that returns basic streak statistics given a sequence
+streak_stats = function(results_sequence, streak_length){
+  n_trials = length(results_sequence)
+  n_success = sum(results_sequence)
+  
+  run_lengths = rle(results_sequence)$lengths
+  if_run_success = rle(results_sequence)$values
+  n_runs = length(run_lengths)
+  
+  # runs of successes
+  longest_run_success = max(run_lengths*if_run_success)
+  n_runs_success = sum(if_run_success)
+  
+  # successes after streaks of Successes
+  run_lengths_adj = run_lengths - streak_length + 1
+  run_values_adj_S =
+    if_run_success *
+    (!((if_run_success == 1) &
+         (run_lengths < streak_length)))
+  n_after_Sstreak = sum(run_lengths_adj * run_values_adj_S) -
+    run_values_adj_S[length(run_values_adj_S)]
+  n_success_after_Sstreak = sum((run_lengths - streak_length) * run_values_adj_S)
+  
+  # runs of failures
+  longest_run_failure = max(run_lengths*(1-if_run_success))
+  n_runs_failure = sum(1-if_run_success)
+  
+  # successes after streaks of Failures
+  run_values_adj_F =
+    (1-if_run_success) *
+    (!((if_run_success == 0) &
+         (run_lengths < streak_length)))
+  n_after_Fstreak = sum(run_lengths_adj * run_values_adj_F) -
+    run_values_adj_F[length(run_values_adj_F)]
+  n_success_after_Fstreak = n_after_Fstreak -
+    sum((run_lengths - streak_length) * run_values_adj_F)
+  
+  # Proportion of hits on trials after streaks
+  phat_after_Sstreak = n_success_after_Sstreak / n_after_Sstreak
+  
+  # Difference in proportion of hits (trials after streaks - all other trials)
+  phat_after_no_Sstreak = (n_success - n_success_after_Sstreak)/
+    (n_trials - n_after_Sstreak)
+  phat_Sstreak_vs_others = phat_after_Sstreak - phat_after_no_Sstreak
+  
+  # Difference in proportion of hits (trials after hit streaks - trials after miss streaks)
+  phat_after_Fstreak = n_success_after_Fstreak / n_after_Fstreak
+  phat_Sstreak_vs_Fstreak = phat_after_Sstreak - phat_after_Fstreak
+  
+  # Hit streak frequency - proportion of trials that occur after hit streaks
+  Sstreak_frequency  = n_after_Sstreak / (n_trials - streak_length)
+  
+  # collect the streak stats for the results sequence
+  return(data.frame(phat_after_Sstreak,
+                    phat_Sstreak_vs_others,
+                    phat_Sstreak_vs_Fstreak,
+                    Sstreak_frequency,
+                    longest_run_success,
+                    n_runs
+                    #                     n_runs_success,
+                    #                     phat_after_Fstreak,
+                    #                     n_runs_failure,
+                    #                     longest_run_failure,
+  ))
+}
+```
+
+Function that loops through all season-long shot vectors and analyzes them
+```{r}
+analyze_all_shot_vectors <- function(all_shot_vectors, streak_length = 3) {
+  
+  results <- list()
+  idx <- 1
+  
+  for (season in names(all_shot_vectors)) {
+    for (player in names(all_shot_vectors[[season]])) {
+      
+      shots <- all_shot_vectors[[season]][[player]]
+      
+      # Skip sequences too short for streak analysis
+      if (length(shots) <= streak_length) next
+      
+      stats <- streak_stats(shots, streak_length)
+      
+      results[[idx]] <- cbind(
+        season = season,
+        player = player,
+        n_shots = length(shots),
+        stats
+      )
+      
+      idx <- idx + 1
+    }
+  }
+  
+  do.call(rbind, results)
+}
+```
+
+Using above function
+```{r}
+season_level_results <- analyze_all_shot_vectors(
+  all_shot_vectors,
+  streak_length = 3
+)
+```
+
+Calculating p-values for all season shot vectors using observed phat_after_Ssuccess
+```{r}
+hot_hand_pvalue <- function(
+  shot_vec,
+  observed_phat,
+  streak_length = 3,
+  n_sims = 5000
+) {
+  
+  n_trials <- length(shot_vec)
+  n_success <- sum(shot_vec)
+  
+  # Edge cases: no possible streaks
+  if (n_trials <= streak_length || is.na(observed_phat)) {
+    return(NA_real_)
+  }
+  
+  # Simulate null sequences with same shots & makes
+  sim_stats <- replicate(n_sims, {
+    
+    sim_vec <- sample(
+      c(rep(1, n_success), rep(0, n_trials - n_success)),
+      size = n_trials,
+      replace = FALSE
+    )
+    
+    streak_stats(sim_vec, streak_length)$phat_after_Sstreak
+  })
+  
+  sim_stats <- sim_stats[!is.na(sim_stats)]
+  
+  # One-sided p-value
+  mean(sim_stats >= observed_phat)
+}
+
+```
+
+Applying to all player-seasons:
+```{r}
+library(dplyr)
+library(purrr)
+
+season_level_results <- season_level_results %>%
+  rowwise() %>%
+  mutate(
+    pvalue = {
+      
+      season_chr <- as.character(season)   # e.g. "2002"
+      player_chr <- player
+      
+      shot_vec <- all_shot_vectors[[season_chr]][[player_chr]]
+      
+      if (is.null(shot_vec)) {
+        NA_real_
+      } else {
+        hot_hand_pvalue(
+          shot_vec = shot_vec,
+          observed_phat = phat_after_Sstreak,
+          streak_length = 3,
+          n_sims = 1000
+        )
+      }
+    }
+  ) %>%
+  ungroup()
+
+```
+
+```{r}
+# Expect 5% -> 0.05(720) = 36 to have significant p-values
+sum(season_level_results$pvalue < 0.05, na.rm = TRUE)
+```
+
+Distribution of Hot Hand p-values
+```{r}
+ggplot(season_level_results, aes(x = pvalue)) +
+  geom_histogram(bins = 30, fill = "steelblue", alpha = 0.8) +
+  labs(
+    title = "Distribution of Hot Hand P-values",
+    x = "P-value",
+    y = "Count"
+  ) +
+  theme_minimal()
+
+```
+
+ECDF plot
+```{r}
+ggplot(season_level_results, aes(pvalue)) +
+  stat_ecdf(size = 1) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  labs(
+    title = "Empirical CDF of Hot Hand P-values",
+    x = "P-value",
+    y = "Cumulative proportion"
+  ) +
+  theme_minimal()
+
+```
+
+Interpretation
+
+* Dashed line = perfect uniform null
+
+* Curve above line near 0 = excess small p-values
+
+QQ-Plot
+```{r}
+observed <- sort(season_level_results$pvalue)
+expected <- ppoints(length(observed))
+
+qq_df <- data.frame(expected, observed)
+
+ggplot(qq_df, aes(expected, observed)) +
+  geom_point(size = 2, alpha = 0.7) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  labs(
+    title = "QQ Plot of Hot Hand P-values",
+    x = "Expected under Uniform(0,1)",
+    y = "Observed p-values"
+  ) +
+  theme_minimal()
+```
+
+Season-by-season p value distributions
+```{r}
+ggplot(season_level_results,
+       aes(x = factor(season), y = pvalue)) +
+  geom_boxplot(outlier.alpha = 0.4) +
+  geom_hline(yintercept = 0.05, linetype = "dashed", color = "red") +
+  labs(
+    title = "Distribution of Hot Hand P-values by Season",
+    x = "Season",
+    y = "P-value"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45))
+
+```
+
+Benjamini-Hochberg Adjusted P-Values
+```{r}
+season_level_results <- season_level_results %>%
+  mutate(
+    pvalue_adj = p.adjust(pvalue, method = "BH")
+  )
+```
+
+
+### Null Distribution Statistics
+
+```{r}
+hot_hand_null_stats <- function(
+  shot_vec,
+  observed_phat,
+  streak_length = 3,
+  n_sims = 5000
+) {
+
+  n_trials  <- length(shot_vec)
+  n_success <- sum(shot_vec)
+
+  # Edge cases
+  if (n_trials <= streak_length || is.na(observed_phat)) {
+    return(
+      tibble(
+        null_median = NA_real_,
+        null_mean   = NA_real_,
+        null_sd     = NA_real_,
+        p_value     = NA_real_,
+        z_score     = NA_real_
+      )
+    )
+  }
+
+  # Simulate null distribution
+  null_stats <- replicate(n_sims, {
+    sim_vec <- sample(
+      c(rep(1, n_success), rep(0, n_trials - n_success)),
+      size = n_trials,
+      replace = FALSE
+    )
+    streak_stats(sim_vec, streak_length)$phat_Sstreak_vs_others # $phat_after_Sstreak
+  })
+
+  null_stats <- null_stats[!is.na(null_stats)]
+
+  null_mean   <- mean(null_stats)
+  null_median <- median(null_stats)
+  null_sd     <- sd(null_stats)
+
+  tibble(
+    null_median = null_median,
+    null_mean   = null_mean,
+    null_sd     = null_sd,
+    p_value     = mean(null_stats >= observed_phat),
+    z_score     = (observed_phat - null_mean) / null_sd
+  )
+}
+
+```
+
+```{r}
+season_level_results <- season_level_results %>%
+  mutate(
+    diff_in_proportions = phat_Sstreak_vs_others
+  )
+```
+
+```{r}
+library(dplyr)
+library(purrr)
+
+season_level_results <- season_level_results %>%
+  rowwise() %>%
+  mutate(
+    null_stats = list({
+
+      season_chr <- as.character(season)
+      player_chr <- player
+      shot_vec   <- all_shot_vectors[[season_chr]][[player_chr]]
+
+      if (is.null(shot_vec)) {
+        tibble(
+          null_median = NA_real_,
+          null_mean   = NA_real_,
+          null_sd     = NA_real_,
+          p_value     = NA_real_,
+          z_score     = NA_real_
+        )
+      } else {
+        hot_hand_null_stats(
+          shot_vec       = shot_vec,
+          observed_phat  = phat_Sstreak_vs_others,
+          streak_length  = 3,
+          n_sims         = 1000
+        )
+      }
+    })
+  ) %>%
+  unnest(null_stats) %>%
+  ungroup()
+
+```
+
+```{r}
+appendix_table <- season_level_results %>%
+  rowwise() %>%
+  mutate(
+    n_successes = sum(all_shot_vectors[[as.character(season)]][[player]]),
+    phat_other_trials = phat_after_Sstreak - phat_Sstreak_vs_others
+  ) %>%
+  ungroup()
+
+
+appendix_table <- appendix_table %>%
+  select(
+    player,
+    season,
+    n_shots,
+    n_successes,
+    n_runs,
+    phat_after_Sstreak,
+    phat_other_trials,
+    diff_in_proportions,
+    null_median,
+    null_mean,
+    null_sd,
+    p_value,
+    z_score
+  ) %>%
+  arrange(p_value)
+
+
+```
+
+```{r}
+appendix_table_top20 <- appendix_table %>%
+  slice_head(n = 20)
+
+
+appendix_table_top20 %>%
+  kable(
+    format = "html",
+    caption = "Top 20 Player–Seasons with the Lowest Permutation-Test p-values (Streak Length = 3)",
+    digits = 3
+  ) %>%
+  kable_styling(
+    full_width = FALSE,
+    bootstrap_options = c("striped", "hover", "condensed")
+  )
+```
+
+## Opportunities Analysis
+
+### Game-Level Data
+
+```{r}
+
+```
+
+### 2001-02 through 2024-25
+
+```{r}
+# function for building data frame with each season's top 30 3PA shooters
+build_players_by_season <- function(
+  start_season = 2002,
+  end_season = 2025,
+  envir = .GlobalEnv
+) {
+  seasons <- start_season:end_season
+
+  players_by_season <- lapply(seasons, function(season_year) {
+
+    # Convert 2002 -> "01_02", 2025 -> "24_25"
+    prev_yr <- substr(season_year - 1, 3, 4)
+    curr_yr <- substr(season_year, 3, 4)
+
+    obj_name <- paste0("players", prev_yr, "_", curr_yr, "Ind")
+
+    if (!exists(obj_name, envir = envir)) {
+      stop("Missing object: ", obj_name)
+    }
+
+    get(obj_name, envir = envir)
+  })
+
+  names(players_by_season) <- seasons
+  players_by_season
+}
+```
+
+```{r}
+# building data frame for 2001-02 thorugh 2022-23 seasons
+players_by_season <- build_players_by_season(
+  start_season = 2002,
+  end_season   = 2025
+)
+```
+
+```{r}
+# processing PBP data for each season
+process_one_season <- function(
+  season_year,
+  players_vec,
+  k = 3
+) {
+
+  library(dplyr)
+  library(zoo)
+  library(hoopR)
+
+  message("Processing season: ", season_year - 1, "-", season_year)
+
+  # -------------------------------
+  # Load + filter PBP
+  # -------------------------------
+  pbp <- hoopR::load_nba_pbp(season = season_year) |>
+    mutate(text = gsub("\\s*\\(.*", "", text)) |>
+    filter(
+      grepl("three point", text, ignore.case = TRUE),
+      season_type == 2
+    ) |>
+    select(
+      game_id, game_date, qtr, sequence_number,
+      end_quarter_seconds_remaining,
+      scoring_play, text
+    )
+
+  # -------------------------------
+  # Helper: extract shots by game
+  # -------------------------------
+  get_shots_by_game <- function(df) {
+    df |>
+      arrange(game_id, sequence_number) |>
+      group_by(game_id) |>
+      summarize(
+        shots = list(ifelse(scoring_play, 1, 0)),
+        .groups = "drop"
+      )
+  }
+
+  # -------------------------------
+  # Helper: add opportunities
+  # -------------------------------
+  add_num_opportunities <- function(df) {
+    df$num_opportunities <- vapply(df$shots, function(shots_num) {
+
+      if (length(shots_num) < k) return(0L)
+
+      rolling <- zoo::rollapply(
+        shots_num, k, sum,
+        align = "right", fill = NA
+      )
+
+      rolling <- dplyr::lag(rolling, 1)
+      sum(rolling == k, na.rm = TRUE)
+
+    }, integer(1))
+
+    df
+  }
+
+  # -------------------------------
+  # Helper: add opportunity makes
+  # -------------------------------
+  add_num_opportunity_makes <- function(df) {
+    df$num_opportunity_makes <- vapply(df$shots, function(shots) {
+      n <- length(shots)
+      if (n <= k) return(0L)
+
+      sum(
+        vapply((k + 1):n, function(j) {
+          all(shots[(j - k):(j - 1)] == 1) && shots[j] == 1
+        }, logical(1))
+      )
+    }, integer(1))
+
+    df
+  }
+
+  # -------------------------------
+  # Per-player computation
+  # -------------------------------
+  player_opps <- numeric(length(players_vec))
+  player_opp_makes <- numeric(length(players_vec))
+  names(player_opps) <- names(player_opp_makes) <- players_vec
+
+  for (i in seq_along(players_vec)) {
+
+    player <- players_vec[i]
+
+    player_df <- pbp |>
+      filter(grepl(player, text, ignore.case = TRUE))
+
+    if (nrow(player_df) == 0) {
+      player_opps[i] <- 0
+      player_opp_makes[i] <- 0
+      next
+    }
+
+    games_df <- player_df |>
+      get_shots_by_game() |>
+      add_num_opportunities() |>
+      add_num_opportunity_makes()
+
+    player_opps[i] <- sum(games_df$num_opportunities)
+    player_opp_makes[i] <- sum(games_df$num_opportunity_makes)
+  }
+
+  # -------------------------------
+  # Cleanup (VERY important)
+  # -------------------------------
+  rm(pbp)
+  gc()
+
+  # -------------------------------
+  # Return small object
+  # -------------------------------
+  list(
+    season = paste0(season_year - 1, "-", substr(season_year, 3, 4)),
+    opportunities = player_opps,
+    opportunity_makes = player_opp_makes
+  )
+}
+
+```
+
+```{r}
+# Loop safely over all seasons (2001–02 → 2022–25)
+seasons <- 2002:2025
+
+all_season_results <- vector("list", length(seasons))
+names(all_season_results) <- seasons
+
+for (i in seq_along(seasons)) {
+
+  season_year <- seasons[i]
+
+  if (is.null(players_by_season[[as.character(season_year)]])) {
+    stop("No player list found for season ", season_year)
+  }
+
+  all_season_results[[i]] <-
+    process_one_season(
+      season_year = season_year,
+      players_vec = players_by_season[[as.character(season_year)]]
+    )
+}
+```
+
+```{r}
+# Build analysis-ready data frame
+opportunity_df_all <- do.call(
+  rbind,
+  lapply(all_season_results, function(res) {
+    data.frame(
+      player = names(res$opportunities),
+      opportunities = unname(res$opportunities),
+      opportunity_makes = unname(res$opportunity_makes),
+      season = res$season
+    )
+  })
+)
+```
+
+```{r}
+opportunity_df_all <- opportunity_df_all %>%
+  mutate(
+    season_end = as.numeric(str_extract(season, "(?<=-)\\d{2}$")) + 2000
+  )
+
+```
+
+Distribution of Hot Hand Opportunities by Season:
+```{r}
+# Build analysis-ready data frame
+library(ggplot2)
+
+ggplot(opportunity_df_all, aes(x = as.factor(season_end), y = opportunities)) +
+  geom_boxplot(fill = "skyblue") +
+  theme_minimal() +
+  labs(
+    title = "Distribution of Hot-Hand Opportunities by Season",
+    x = "Season",
+    y = "Number of Opportunities"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+
+Average Number of Hot Hand Opportunities by Season
+
+```{r}
+avg_opps_by_season <- opportunity_df_all %>%
+  group_by(season_end) %>%
+  summarise(
+    avg_opportunities = mean(opportunities, na.rm = TRUE),
+    total_opportunities = sum(opportunities, na.rm = TRUE),
+    n_players = n(),
+    .groups = "drop"
+  )
+
+ggplot(avg_opps_by_season, aes(x = season_end, y = avg_opportunities)) +
+  geom_point(size = 2) +
+  geom_line(alpha = 0.4) +
+  geom_smooth(se = FALSE) +
+  labs(
+    title = "Average Hot Hand Opportunities by Season",
+    x = "Season",
+    y = "Average Opportunities per Player"
+  ) +
+  theme_minimal() +
+  scale_x_continuous(
+    breaks = seq(2002, 2025, by = 1),  # tick every year
+    labels = seq(2002, 2025, by = 1)   # labels match ticks
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+```{r}
+# Aggregate by season
+season_fg_pct <- opportunity_df_all %>%
+  group_by(season) %>%
+  summarise(
+    total_makes = sum(opportunity_makes, na.rm = TRUE),
+    total_opps  = sum(opportunities, na.rm = TRUE),
+    fg_pct      = total_makes / total_opps
+  ) %>%
+  ungroup()
+```
+
+```{r}
+season_fg_pct <- season_fg_pct |>
+  rename(Season = season)
+```
+
+```{r}
+season_fg_pct <- season_fg_pct |>
+  rename(Season = season) %>%
+  mutate(
+    season_end = as.numeric(str_extract(Season, "(?<=-)\\d{2}$")) + 2000
+  )
+```
+
+3-Point Seasonal Field Goal Percentage Following Hot Hand Opportunity
+
+```{r}
+ggplot(season_fg_pct, aes(x = season_end, y = fg_pct)) +
+  geom_point(color = "black", size = 2) +
+  geom_line(alpha = 0.4) +
+  geom_smooth(method = "loess", se = T) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  labs(
+    title = "3-Point Seasonal Field Goal Percentage During Hot Hand Opportunity",
+    subtitle = "Among Top 30 Shooters",
+    x = "Season",
+    y = "3P%"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  scale_x_continuous(
+    breaks = seq(2002, 2025, by = 1),  # tick every year
+    labels = seq(2002, 2025, by = 1)   # labels match ticks
+  )
+
+```
+
+* Look at player's last attempts of game and first attempts of game to see if the percentages are similar.  
+
+Getting combined 3P% for the top 30 shooters for each season: 
+```{r}
+# Getting combined 3P% for the top 30 shooters for each season: 
+get_season_3p_pct <- function(df, season_label) {
+  
+  data.frame(
+    Season = season_label,
+    three_p_pct = sum(df$`3P`, na.rm = TRUE) / sum(df$`3PA`, na.rm = TRUE)
+  )
+}
+```
+
+```{r}
+season_dfs <- list(
+  "2001-02" = `players01-02_top30_3PA`,
+  "2002-03" = `players02-03_top30_3PA`,
+  "2003-04" = `players03-04_top30_3PA`,
+  "2004-05" = `players04-05_top30_3PA`,
+  "2005-06" = `players05-06_top30_3PA`,
+  "2006-07" = `players06-07_top30_3PA`,
+  "2007-08" = `players07-08_top30_3PA`,
+  "2008-09" = `players08-09_top30_3PA`,
+  "2009-10" = `players09-10_top30_3PA`,
+  "2010-11" = `players10-11_top30_3PA`,
+  "2011-12" = `players11-12_top30_3PA`,
+  "2012-13" = `players12-13_top30_3PA`,
+  "2013-14" = `players13-14_top30_3PA`,
+  "2014-15" = `players14-15_top30_3PA`,
+  "2015-16" = `players15-16_top30_3PA`,
+  "2016-17" = `players16-17_top30_3PA`,
+  "2017-18" = `players17-18_top30_3PA`,
+  "2018-19" = `players18-19_top30_3PA`,
+  "2019-20" = `players19-20_top30_3PA`,
+  "2020-21" = `players20-21_top30_3PA`,
+  "2021-22" = `players21-22_top30_3PA`,
+  "2022-23" = `players22-23_top30_3PA`,
+  "2023-24" = `players23-24_top30_3PA`,
+  "2024-25" = `players24-25_top30_3PA`
+)
+
+```
+
+Creating dataset that has 3P% by year for top 30 shooters combined
+
+```{r}
+three_pt_pct_by_season <- bind_rows(
+  lapply(names(season_dfs), function(season) {
+    get_season_3p_pct(season_dfs[[season]], season)
+  })
+)
+```
+
+
+Joining season_fg_pct and three_pt_pct_by_season to add baseline 3P%
+
+```{r}
+season_fg_pct <- left_join(season_fg_pct, three_pt_pct_by_season, by = "Season")
+```
+
+3-Point Seasonal Field Goal Percentage Following Hot Hand Opportunity with Baseline 3P%
+
+```{r}
+season_fg_long <- season_fg_pct %>%
+  pivot_longer(
+    cols = c(fg_pct, three_p_pct),
+    names_to = "type",
+    values_to = "pct"
+  ) %>%
+  mutate(
+    type = recode(type,
+                  fg_pct = "Hot-hand 3P%",
+                  three_p_pct = "Baseline 3P%")
+  )
+
+```
+
+```{r}
+season_fg_long <- season_fg_long %>%
+  mutate(
+    season_end = as.numeric(str_extract(Season, "(?<=-)\\d{2}$")) + 2000
+  )
+```
+
+```{r}
+ggplot(season_fg_long, aes(x = season_end, y = pct, color = type)) +
+  geom_point(size = 2) +
+  geom_line(alpha = 0.4) +
+  geom_smooth(method = "loess", se = T) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 0.1)) +
+  labs(
+    title = "Hot-Hand vs Baseline 3P% by Season",
+    x = "Season (ending year)",
+    y = "3P%",
+    color = "Rate Type"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+```
+
+Difference between Hot-Hand 3P% and Baseline 3P%
+
+```{r}
+season_fg_pct <- season_fg_pct %>%
+  mutate(diff = fg_pct - three_p_pct)
+
+ggplot(season_fg_pct, aes(x = season_end, y = diff)) +
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  geom_point(size = 2) +
+  geom_line(alpha = 0.4) +
+  geom_smooth(method = "loess", se = T) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 0.1)) +
+  labs(
+    title = "Hot-Hand Advantage Over Baseline by Season",
+    x = "Season",
+    y = "Hot-hand 3P% − Baseline 3P%"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  scale_x_continuous(
+    breaks = seq(2002, 2025, by = 1),  # tick every year
+    labels = seq(2002, 2025, by = 1)   # labels match ticks
+  )
+
+```
+
+* If there is a streak, calculate how long those streaks are (3, 4, 5, etc.) and see how that impacts a potential bias / difference in hot-hand 3P% vs Baseline 3P%
