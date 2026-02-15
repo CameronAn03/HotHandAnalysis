@@ -24,6 +24,7 @@ library(stringr)
 library(stringi)
 library(kableExtra)
 library(scales)
+library(gitcreds)
 ```
 
 ```{r}
@@ -194,6 +195,7 @@ assign_ind_top_players(seasons)
 ```
 
 Cleaning Player Names:
+
 ```{r}
 players15_16Ind[players15_16Ind == "Nikola Vu?evi?"] <- "Nikola Vucevic"
 players16_17Ind[players16_17Ind == "Goran Dragi?"] <- "Goran Dragic"
@@ -481,7 +483,8 @@ ggplot(SeasonAvgs, aes(x = season_end, y = FG.)) +
   labs(
     x = "Season (End Year)",
     y = "FG%",
-    title = "League-Average Field Goal Percentage by Season"
+    title = "League-Average Field Goal Percentage by Season",
+    subtitle = "Season is denoted as end year of season (e.g. 2025 = 2024-25)"
   ) +
   theme_minimal() +
   scale_x_continuous(breaks = 2016:2025) +
@@ -667,218 +670,118 @@ for (yr in names(shot_sequences_all)) {
 
 ```
 
+Creating large dataset with all game opportunities for each season
+
+```{r}
+obj_names <- ls(pattern = "^game_opportunities_")
+
+obj_names <- obj_names[sapply(obj_names, exists)]
+
+game_opportunities_all <- mget(obj_names) %>%
+  bind_rows(.id = "source") %>%
+  mutate(
+    season_end = as.integer(str_extract(source, "\\d{4}"))
+  ) %>%
+  select(-source)
+```
+
 
 Distribution of Hot Hand Opportunities by Season:
-```{r}
-# Build analysis-ready data frame
-library(ggplot2)
-
-ggplot(opportunity_df_all, aes(x = as.factor(season_end), y = opportunities)) +
-  geom_boxplot(fill = "skyblue") +
-  theme_minimal() +
-  labs(
-    title = "Distribution of Hot-Hand Opportunities by Season",
-    x = "Season",
-    y = "Number of Opportunities"
-  ) +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
-```
-
-
-Average Number of Hot Hand Opportunities by Season
 
 ```{r}
-avg_opps_by_season <- opportunity_df_all %>%
+season_summary_opportunities <- game_opportunities_all %>%
   group_by(season_end) %>%
   summarise(
-    avg_opportunities = mean(opportunities, na.rm = TRUE),
-    total_opportunities = sum(opportunities, na.rm = TRUE),
-    n_players = n(),
+    mean_opps = mean(n_opportunities, na.rm = TRUE),
+    mean_opps_makes = mean(n_opportunity_makes, na.rm = TRUE),
+    mean_opps_percentage = sum(n_opportunity_makes, na.rm = TRUE) /
+                            sum(n_opportunities, na.rm = TRUE),
     .groups = "drop"
   )
+```
 
-ggplot(avg_opps_by_season, aes(x = season_end, y = avg_opportunities)) +
-  geom_point(size = 2) +
+League-Average Hot-Hand Opportunities per Game by Season
+
+```{r}
+ggplot(season_summary_opportunities, aes(x = season_end, y = mean_opps)) +
+  geom_point() +
   geom_line(alpha = 0.4) +
-  geom_smooth(se = FALSE) +
+  geom_smooth(method = "loess", se = FALSE) +
+  scale_x_continuous(breaks = 2016:2025) +
   labs(
-    title = "Average Hot Hand Opportunities by Season",
-    x = "Season",
-    y = "Average Opportunities per Player"
+    x = "Season (End Year)",
+    y = "Average Hot-Hand Opportunities per Game",
+    title = "Average Hot-Hand Opportunities per Game by Season",
+    subtitle = "for top 50 shooters per Season (by FGA)"
   ) +
-  theme_minimal() +
-  scale_x_continuous(
-    breaks = seq(2002, 2025, by = 1),  # tick every year
-    labels = seq(2002, 2025, by = 1)   # labels match ticks
-  ) +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
+  theme_minimal()
+
 ```
 
-```{r}
-# Aggregate by season
-season_fg_pct <- opportunity_df_all %>%
-  group_by(season) %>%
-  summarise(
-    total_makes = sum(opportunity_makes, na.rm = TRUE),
-    total_opps  = sum(opportunities, na.rm = TRUE),
-    fg_pct      = total_makes / total_opps
-  ) %>%
-  ungroup()
-```
+League-Average Hot-Hand FG% by Season
 
 ```{r}
-season_fg_pct <- season_fg_pct |>
-  rename(Season = season)
-```
-
-```{r}
-season_fg_pct <- season_fg_pct |>
-  rename(Season = season) %>%
-  mutate(
-    season_end = as.numeric(str_extract(Season, "(?<=-)\\d{2}$")) + 2000
-  )
-```
-
-3-Point Seasonal Field Goal Percentage Following Hot Hand Opportunity
-
-```{r}
-ggplot(season_fg_pct, aes(x = season_end, y = fg_pct)) +
-  geom_point(color = "black", size = 2) +
+ggplot(season_summary_opportunities, aes(x = season_end, y = mean_opps_percentage)) +
+  geom_point() +
   geom_line(alpha = 0.4) +
-  geom_smooth(method = "loess", se = T) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  geom_smooth(method = "loess", se = FALSE) +
+  scale_x_continuous(breaks = 2016:2025) +
   labs(
-    title = "3-Point Seasonal Field Goal Percentage During Hot Hand Opportunity",
-    subtitle = "Among Top 30 Shooters",
-    x = "Season",
-    y = "3P%"
+    x = "Season (End Year)",
+    y = "Hot-Hand FG%",
+    title = "Hot-Hand FG% by Season",
+    subtitle = "for top 50 shooters per Season (by FGA)"
   ) +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  ) +
-  scale_x_continuous(
-    breaks = seq(2002, 2025, by = 1),  # tick every year
-    labels = seq(2002, 2025, by = 1)   # labels match ticks
-  )
+  theme_minimal()
 
 ```
 
-* Look at player's last attempts of game and first attempts of game to see if the percentages are similar.  
+Creating baseline FG% for top 50 players by season
 
-Getting combined 3P% for the top 30 shooters for each season: 
 ```{r}
-# Getting combined 3P% for the top 30 shooters for each season: 
-get_season_3p_pct <- function(df, season_label) {
-  
-  data.frame(
-    Season = season_label,
-    three_p_pct = sum(df$`3P`, na.rm = TRUE) / sum(df$`3PA`, na.rm = TRUE)
-  )
+# function to create combined FG% for top 50 players per season
+season_fg_percentage <- function(df) {
+  total_fg <- sum(df$FG, na.rm = TRUE)
+  total_fga <- sum(df$FGA, na.rm = TRUE)
+  total_fg / total_fga
 }
 ```
 
 ```{r}
-season_dfs <- list(
-  "2001-02" = `players01-02_top30_3PA`,
-  "2002-03" = `players02-03_top30_3PA`,
-  "2003-04" = `players03-04_top30_3PA`,
-  "2004-05" = `players04-05_top30_3PA`,
-  "2005-06" = `players05-06_top30_3PA`,
-  "2006-07" = `players06-07_top30_3PA`,
-  "2007-08" = `players07-08_top30_3PA`,
-  "2008-09" = `players08-09_top30_3PA`,
-  "2009-10" = `players09-10_top30_3PA`,
-  "2010-11" = `players10-11_top30_3PA`,
-  "2011-12" = `players11-12_top30_3PA`,
-  "2012-13" = `players12-13_top30_3PA`,
-  "2013-14" = `players13-14_top30_3PA`,
-  "2014-15" = `players14-15_top30_3PA`,
-  "2015-16" = `players15-16_top30_3PA`,
-  "2016-17" = `players16-17_top30_3PA`,
-  "2017-18" = `players17-18_top30_3PA`,
-  "2018-19" = `players18-19_top30_3PA`,
-  "2019-20" = `players19-20_top30_3PA`,
-  "2020-21" = `players20-21_top30_3PA`,
-  "2021-22" = `players21-22_top30_3PA`,
-  "2022-23" = `players22-23_top30_3PA`,
-  "2023-24" = `players23-24_top30_3PA`,
-  "2024-25" = `players24-25_top30_3PA`
+# Vector of seasons
+seasons <- 2016:2025
+
+# Corresponding dataset names
+dataset_names <- c(
+  "players15-16_top50", "players16-17_top50", "players17-18_top50",
+  "players18-19_top50", "players19-20_top50", "players20-21_top50",
+  "players21-22_top50", "players22-23_top50", "players23-24_top50",
+  "players24-25_top50"
 )
 
-```
-
-Creating dataset that has 3P% by year for top 30 shooters combined
-
-```{r}
-three_pt_pct_by_season <- bind_rows(
-  lapply(names(season_dfs), function(season) {
-    get_season_3p_pct(season_dfs[[season]], season)
-  })
-)
-```
-
-
-Joining season_fg_pct and three_pt_pct_by_season to add baseline 3P%
-
-```{r}
-season_fg_pct <- left_join(season_fg_pct, three_pt_pct_by_season, by = "Season")
-```
-
-3-Point Seasonal Field Goal Percentage Following Hot Hand Opportunity with Baseline 3P%
-
-```{r}
-season_fg_long <- season_fg_pct %>%
-  pivot_longer(
-    cols = c(fg_pct, three_p_pct),
-    names_to = "type",
-    values_to = "pct"
-  ) %>%
-  mutate(
-    type = recode(type,
-                  fg_pct = "Hot-hand 3P%",
-                  three_p_pct = "Baseline 3P%")
-  )
-
+# applying function 
+baseline_fg <- sapply(dataset_names, function(x) {
+  df <- get(x)
+  season_fg_percentage(df)
+})
 ```
 
 ```{r}
-season_fg_long <- season_fg_long %>%
-  mutate(
-    season_end = as.numeric(str_extract(Season, "(?<=-)\\d{2}$")) + 2000
-  )
+# adding baseling FG% to season_summary_opportunities
+season_summary_opportunities$baseline_fg_percentage <- baseline_fg
+```
+
+
+Difference between Hot-Hand FG% and Baseline FG%
+
+```{r}
+# creating difference variable (between hot hand FG% and baseline fg%)
+season_summary_opportunities <- season_summary_opportunities %>%
+  mutate(diff = mean_opps_percentage - baseline_fg_percentage)
 ```
 
 ```{r}
-ggplot(season_fg_long, aes(x = season_end, y = pct, color = type)) +
-  geom_point(size = 2) +
-  geom_line(alpha = 0.4) +
-  geom_smooth(method = "loess", se = T) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 0.1)) +
-  labs(
-    title = "Hot-Hand vs Baseline 3P% by Season",
-    x = "Season (ending year)",
-    y = "3P%",
-    color = "Rate Type"
-  ) +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
-
-```
-
-Difference between Hot-Hand 3P% and Baseline 3P%
-
-```{r}
-season_fg_pct <- season_fg_pct %>%
-  mutate(diff = fg_pct - three_p_pct)
-
-ggplot(season_fg_pct, aes(x = season_end, y = diff)) +
+ggplot(season_summary_opportunities, aes(x = season_end, y = diff)) +
   geom_hline(yintercept = 0, linetype = "dotted") +
   geom_point(size = 2) +
   geom_line(alpha = 0.4) +
@@ -886,21 +789,16 @@ ggplot(season_fg_pct, aes(x = season_end, y = diff)) +
   scale_y_continuous(labels = scales::percent_format(accuracy = 0.1)) +
   labs(
     title = "Hot-Hand Advantage Over Baseline by Season",
-    x = "Season",
+    x = "Season (End Year)",
     y = "Hot-hand 3P% − Baseline 3P%"
   ) +
   theme_minimal() +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  ) +
   scale_x_continuous(
-    breaks = seq(2002, 2025, by = 1),  # tick every year
-    labels = seq(2002, 2025, by = 1)   # labels match ticks
+    breaks = seq(2016, 2025, by = 1),  # tick every year
+    labels = seq(2016, 2025, by = 1)   # labels match ticks
   )
 
 ```
-
-* If there is a streak, calculate how long those streaks are (3, 4, 5, etc.) and see how that impacts a potential bias / difference in hot-hand 3P% vs Baseline 3P%
 
 
 ## Season-Long Trends
@@ -1025,6 +923,7 @@ streak_stats = function(results_sequence, streak_length){
 ```
 
 Function that loops through all season-long shot vectors and analyzes them
+
 ```{r}
 analyze_all_shot_vectors <- function(all_shot_vectors, streak_length = 3) {
   
@@ -1057,6 +956,7 @@ analyze_all_shot_vectors <- function(all_shot_vectors, streak_length = 3) {
 ```
 
 Converting season_shot_sequences object to format that is usable by the function
+
 ```{r}
 all_season_shot_vectors <- lapply(season_shot_sequences, function(df) {
   
@@ -1071,6 +971,7 @@ all_season_shot_vectors <- lapply(season_shot_sequences, function(df) {
 ```
 
 Using above function
+
 ```{r}
 season_level_results <- analyze_all_shot_vectors(
   all_season_shot_vectors,
@@ -1079,6 +980,7 @@ season_level_results <- analyze_all_shot_vectors(
 ```
 
 Calculating p-values for all season shot vectors using phat_Streak_vs_others
+
 ```{r}
 hot_hand_pvalue <- function(
   shot_vec,
@@ -1116,6 +1018,7 @@ hot_hand_pvalue <- function(
 ```
 
 Applying to all player-seasons:
+
 ```{r}
 library(dplyr)
 library(purrr)
@@ -1146,14 +1049,13 @@ season_level_results <- season_level_results %>%
 
 ```
 
-
-
 ```{r}
 # Expect 5% -> 0.05(500) = 25 to have significant p-values
 sum(season_level_results$pvalue < 0.05, na.rm = TRUE)
 ```
 
 Distribution of Hot Hand p-values
+
 ```{r}
 ggplot(season_level_results, aes(x = pvalue)) +
   geom_density(fill = "steelblue", alpha = 0.4) +
@@ -1166,8 +1068,8 @@ ggplot(season_level_results, aes(x = pvalue)) +
   theme_minimal()
 ```
 
-
 ECDF plot
+
 ```{r}
 ggplot(season_level_results, aes(pvalue)) +
   stat_ecdf(size = 1) +
@@ -1183,11 +1085,12 @@ ggplot(season_level_results, aes(pvalue)) +
 
 Interpretation
 
-* Dashed line = perfect uniform null
+-   Dashed line = perfect uniform null
 
-* Curve above line near 0 = excess small p-values
+-   Curve above line near 0 = excess small p-values
 
 QQ-Plot
+
 ```{r}
 observed <- sort(season_level_results$pvalue)
 expected <- ppoints(length(observed))
@@ -1206,6 +1109,7 @@ ggplot(qq_df, aes(expected, observed)) +
 ```
 
 Season-by-season p value distributions
+
 ```{r}
 ggplot(season_level_results,
        aes(x = factor(season), y = pvalue)) +
@@ -1222,6 +1126,7 @@ ggplot(season_level_results,
 ```
 
 Benjamini-Hochberg Adjusted P-Values
+
 ```{r}
 season_level_results <- season_level_results %>%
   mutate(
@@ -1373,12 +1278,10 @@ appendix_table_top20 %>%
   )
 ```
 
-
 ### k = 1
 
-
-
 Using above function
+
 ```{r}
 season_level_results_k1 <- analyze_all_shot_vectors(
   all_season_shot_vectors,
@@ -1417,8 +1320,6 @@ season_level_results_k1 <- season_level_results_k1 %>%
   ungroup()
 
 ```
-
-
 
 ```{r}
 # Expect 5% -> 0.05(500) = 25 to have significant p-values
@@ -1470,7 +1371,6 @@ season_level_results_k1 <- season_level_results_k1 %>%
 
 ```
 
-
 ```{r}
 appendix_table_k1 <- season_level_results_k1 %>%
   rowwise() %>%
@@ -1501,28 +1401,3 @@ appendix_table_k1 <- appendix_table_k1 %>%
 
 
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
