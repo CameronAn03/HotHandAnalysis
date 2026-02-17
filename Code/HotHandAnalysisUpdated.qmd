@@ -732,7 +732,9 @@ ggplot(season_summary_opportunities, aes(x = season_end, y = mean_opps_percentag
     title = "Hot-Hand FG% by Season",
     subtitle = "for top 50 shooters per Season (by FGA)"
   ) +
-  theme_minimal()
+  theme_minimal() + 
+  scale_y_continuous(labels = function(x) sprintf("%.1f", x * 100))
+
 
 ```
 
@@ -799,6 +801,178 @@ ggplot(season_summary_opportunities, aes(x = season_end, y = diff)) +
   )
 
 ```
+
+Creating dataset that analyzes each game shot sequence and reports opp_pct and other_pct
+
+```{r}
+# Creating dataset that analyzes each game shot sequence and reports opp_pct and other_pct
+shots_all_df <- imap_dfr(shot_sequences_all, function(df, season) {
+
+  df %>%
+    mutate(
+      season_end = as.integer(season),
+      total_shots = map_int(shots, length),
+      total_makes = map_int(shots, sum)
+    ) %>%
+    select(player, athlete_id_1, game_id, season_end,
+           total_shots, total_makes)
+})
+
+```
+
+```{r}
+# combining game data to get all game by game stats ()
+combined_games <- game_opportunities_all %>%
+  left_join(shots_all_df,
+            by = c("player", "athlete_id_1", "game_id", "season_end"))
+
+```
+
+```{r}
+# combining game data to get all game by game stats ()
+combined_games <- combined_games %>%
+  mutate(
+
+    # Opportunity percentage
+    opp_pct = ifelse(n_opportunities == 0,
+                     NA,
+                     n_opportunity_makes / n_opportunities),
+
+    # Other shots
+    other_attempts = total_shots - n_opportunities,
+    other_makes = total_makes - n_opportunity_makes,
+
+    other_pct = ifelse(other_attempts == 0,
+                       NA,
+                       other_makes / other_attempts),
+    
+    # Difference (opp minus other)
+    diff = ifelse(is.na(opp_pct) | is.na(other_pct),
+                  NA,
+                  opp_pct - other_pct)
+  )
+
+
+```
+
+Adding null statistics and p-values for each game
+
+```{r}
+# Getting null stats using total_shots and total_makes
+null_from_counts <- function(total_shots, total_makes,
+                             streak_length = 3,
+                             n_sims = 1000) {
+
+  if (total_shots <= streak_length) {
+    return(tibble(
+      null_mean = NA_real_,
+      null_median = NA_real_,
+      null_sd = NA_real_,
+      null_dist = list(NA_real_)
+    ))
+  }
+
+  null_stats <- replicate(n_sims, {
+
+    sim_vec <- sample(
+      c(rep(1, total_makes),
+        rep(0, total_shots - total_makes)),
+      size = total_shots,
+      replace = FALSE
+    )
+
+    streak_stats(sim_vec, streak_length)$phat_Sstreak_vs_others
+  })
+
+  null_stats <- null_stats[!is.na(null_stats)]
+
+  tibble(
+    null_mean   = mean(null_stats),
+    null_median = median(null_stats),
+    null_sd     = sd(null_stats),
+    null_dist   = list(null_stats)
+  )
+}
+
+```
+
+```{r}
+# Computes nulls once per unique (total_shots, total_makes) pair
+# eliminates many unneccessary iterations
+null_lookup <- combined_games %>%
+  distinct(total_shots, total_makes) %>%
+  mutate(id = row_number()) %>%
+  mutate(
+    null = map2(total_shots, total_makes,
+                ~ null_from_counts(.x, .y,
+                                   streak_length = 3,
+                                   n_sims = 1000))
+  ) %>%
+  unnest(null)
+
+```
+
+```{r}
+# creating new dataset with null stats and p-values
+all_games_analysis <- combined_games %>%
+  left_join(null_lookup,
+            by = c("total_shots", "total_makes")) %>%
+  mutate(
+
+    # p-value using observed diff
+    p_value = ifelse(
+      is.na(diff),
+      NA_real_,
+      map2_dbl(null_dist, diff,
+               ~ mean(.x >= .y, na.rm = TRUE))
+    ),
+
+    z_score = (diff - null_mean) / null_sd
+  ) %>%
+  select(-null_dist) |>
+  mutate(adj_diff = diff - null_mean)
+
+```
+
+Ridge Plot of adj_diff by Season
+
+```{r}
+library(ggridges)
+
+# Compute season means
+season_means <- all_games_analysis %>%
+  group_by(season_end) %>%
+  summarise(mean_adj = mean(adj_diff, na.rm = TRUE))
+
+# Create factor levels for y-axis
+season_levels <- factor(sort(unique(all_games_analysis$season_end)))
+
+# Plot
+all_games_analysis %>%
+  filter(!is.na(adj_diff)) %>%
+  ggplot(aes(
+    x = adj_diff, 
+    y = factor(season_end, levels = rev(levels(season_levels))), # reversed factor
+    fill = factor(season_end)
+  )) +
+  geom_density_ridges(scale = 1.2, alpha = 0.7, color = "black") +
+  geom_point(
+    data = season_means,
+    aes(
+      x = mean_adj,
+      y = factor(season_end, levels = rev(levels(season_levels)))
+    ),
+    size = 2
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  labs(x = "Difference in FG% on Opportunities vs. Other Shots (Null-Adjusted)", y = "Season",
+       title = "Seasonal Differences: FG% on Opportunities vs. Other Shots (Null-Adjusted)") +
+  scale_fill_viridis_d() +
+  scale_x_continuous(labels = scales::percent_format(accuracy = 1)) # x-axis as percentages
+
+```
+
 
 
 ## Season-Long Trends
