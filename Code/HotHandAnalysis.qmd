@@ -242,6 +242,7 @@ assign_ind_top_players(seasons)
 ### Cleaning Event Data
 
 Gathering Player ID's to make filtering easier
+
 ```{r}
 nba_pbp2024 <- hoopR::load_nba_pbp(season = 2024) #%>%
   #filter(grepl("Tim Hardaway", text, ignore.case = TRUE))
@@ -329,7 +330,6 @@ all_ids_df <- bind_rows(
 
 ```
 
-
 ```{r}
 # Did 01-02 season manually
 ids01_02 <- c(349,881,194,42,63,913,
@@ -391,8 +391,6 @@ nba_pbp2025 <- nba_pbp2025 |>
   filter(season_type == 2) |>
   select(-away_score, -home_score, -period_display_value, -score_value, -wallclock, -coordinate_x_raw, -coordinate_y_raw, -game_spread, -home_favorite, -game_spread_available, -home_team_spread, -home_timeout_called, -away_timeout_called, -half, -game_half, -lead_qtr, -lead_half, -start_quarter_seconds_remaining, -start_half_seconds_remaining, -start_game_seconds_remaining)
 ```
-
-
 
 Removing rows where the shooter is blocking someone else
 
@@ -642,12 +640,14 @@ ggplot(SeasonAvgs, aes(x = season_end, y = X3PA)) +
 ## Season-Long Trends
 
 ### Season Shot Vectors
+
 ```{r}
 pbp2007 <- hoopR::load_nba_pbp(season = 2007) |>
   filter(grepl("manu", text, ignore.case = TRUE))
 ```
 
 Cleaning Player Names:
+
 ```{r}
 players16_17Ind[players16_17Ind == "Ersan clyasova"] <- "Ersan Ilyasova"
 players19_20Ind[players19_20Ind == "Dcvis Bertcns"] <- "Davis Bertans"
@@ -676,6 +676,7 @@ players01_02Ind[players01_02Ind == "Peja Stojakovic"] <- "Predrag Stojakovic"
 ```
 
 Function to create season-long shot vectors:
+
 ```{r}
 make_season_shot_vectors <- function(
   season_year,
@@ -732,6 +733,7 @@ make_season_shot_vectors <- function(
 ```
 
 Creating shot vectors for top 30 players for each season:
+
 ```{r}
 season_years <- 2002:2025
 player_lists <- list(
@@ -774,19 +776,8 @@ for (yr in season_years) {
 # Ex: use all_shot_vectors[["2005"]][["Gilbert Arenas"]]
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
 Function to create season-long shot vectors:
+
 ```{r}
 make_season_shot_vectors_ids <- function(
   season_year,
@@ -833,6 +824,7 @@ make_season_shot_vectors_ids <- function(
 ```
 
 Creating shot vectors for top 30 players for each season:
+
 ```{r}
 season_years <- 2002:2025
 player_lists <- list(
@@ -874,7 +866,6 @@ for (yr in season_years) {
 
 # Ex: use all_shot_vectors[["2005"]][["Gilbert Arenas"]]
 ```
-
 
 ## Streak Statistics
 
@@ -947,6 +938,7 @@ streak_stats = function(results_sequence, streak_length){
 ```
 
 Function that loops through all season-long shot vectors and analyzes them
+
 ```{r}
 analyze_all_shot_vectors <- function(all_shot_vectors, streak_length = 3) {
   
@@ -979,6 +971,7 @@ analyze_all_shot_vectors <- function(all_shot_vectors, streak_length = 3) {
 ```
 
 Using above function
+
 ```{r}
 season_level_results <- analyze_all_shot_vectors(
   all_shot_vectors,
@@ -987,6 +980,7 @@ season_level_results <- analyze_all_shot_vectors(
 ```
 
 Calculating p-values for all season shot vectors using observed phat_after_Ssuccess
+
 ```{r}
 hot_hand_pvalue <- function(
   shot_vec,
@@ -1024,6 +1018,7 @@ hot_hand_pvalue <- function(
 ```
 
 Applying to all player-seasons:
+
 ```{r}
 library(dplyr)
 library(purrr)
@@ -1060,6 +1055,7 @@ sum(season_level_results$pvalue < 0.05, na.rm = TRUE)
 ```
 
 Distribution of Hot Hand p-values
+
 ```{r}
 ggplot(season_level_results, aes(x = pvalue)) +
   geom_histogram(bins = 30, fill = "steelblue", alpha = 0.8) +
@@ -1073,6 +1069,7 @@ ggplot(season_level_results, aes(x = pvalue)) +
 ```
 
 ECDF plot
+
 ```{r}
 ggplot(season_level_results, aes(pvalue)) +
   stat_ecdf(size = 1) +
@@ -1088,11 +1085,12 @@ ggplot(season_level_results, aes(pvalue)) +
 
 Interpretation
 
-* Dashed line = perfect uniform null
+-   Dashed line = perfect uniform null
 
-* Curve above line near 0 = excess small p-values
+-   Curve above line near 0 = excess small p-values
 
 QQ-Plot
+
 ```{r}
 observed <- sort(season_level_results$pvalue)
 expected <- ppoints(length(observed))
@@ -1111,6 +1109,7 @@ ggplot(qq_df, aes(expected, observed)) +
 ```
 
 Season-by-season p value distributions
+
 ```{r}
 ggplot(season_level_results,
        aes(x = factor(season), y = pvalue)) +
@@ -1127,13 +1126,13 @@ ggplot(season_level_results,
 ```
 
 Benjamini-Hochberg Adjusted P-Values
+
 ```{r}
 season_level_results <- season_level_results %>%
   mutate(
     pvalue_adj = p.adjust(pvalue, method = "BH")
   )
 ```
-
 
 ### Null Distribution Statistics
 
@@ -1501,6 +1500,7 @@ opportunity_df_all <- opportunity_df_all %>%
 ```
 
 Distribution of Hot Hand Opportunities by Season:
+
 ```{r}
 # Build analysis-ready data frame
 library(ggplot2)
@@ -1517,7 +1517,6 @@ ggplot(opportunity_df_all, aes(x = as.factor(season_end), y = opportunities)) +
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 ```
-
 
 Average Number of Hot Hand Opportunities by Season
 
@@ -1600,9 +1599,10 @@ ggplot(season_fg_pct, aes(x = season_end, y = fg_pct)) +
 
 ```
 
-* Look at player's last attempts of game and first attempts of game to see if the percentages are similar.  
+-   Look at player's last attempts of game and first attempts of game to see if the percentages are similar.
 
-Getting combined 3P% for the top 30 shooters for each season: 
+Getting combined 3P% for the top 30 shooters for each season:
+
 ```{r}
 # Getting combined 3P% for the top 30 shooters for each season: 
 get_season_3p_pct <- function(df, season_label) {
@@ -1653,7 +1653,6 @@ three_pt_pct_by_season <- bind_rows(
   })
 )
 ```
-
 
 Joining season_fg_pct and three_pt_pct_by_season to add baseline 3P%
 
@@ -1732,4 +1731,4 @@ ggplot(season_fg_pct, aes(x = season_end, y = diff)) +
 
 ```
 
-* If there is a streak, calculate how long those streaks are (3, 4, 5, etc.) and see how that impacts a potential bias / difference in hot-hand 3P% vs Baseline 3P%
+-   If there is a streak, calculate how long those streaks are (3, 4, 5, etc.) and see how that impacts a potential bias / difference in hot-hand 3P% vs Baseline 3P%
