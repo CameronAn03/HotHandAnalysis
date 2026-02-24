@@ -1165,11 +1165,308 @@ add_shot_distance <- function(start_year = 2016, end_year = 2025) {
 add_shot_distance()
 ```
 
-```{r}
-# get shot distances for opportunities vs all shots
 
+```{r}
+# New function that stores shots along with shot_dist
+make_shot_sequences_withdist <- function(pbp_data, player_ids) {
+
+  seq_df <- pbp_data %>%
+    filter(!is.na(athlete_id_1)) %>%
+    arrange(game_id,
+            athlete_id_1,
+            desc(start_game_seconds_remaining)) %>%
+    left_join(player_ids, by = "athlete_id_1") %>%
+    group_by(player, athlete_id_1, game_id) %>%
+    summarise(
+
+      shots = list(as.integer(scoring_play)),
+
+      shot_dist = list(shot_dist),
+
+      .groups = "drop"
+    )
+
+  return(seq_df)
+}
 ```
 
+```{r}
+# running make_shot_sequences_withdist function for all seasons
+pbp_years <- 2016:2025
+player_ids_list <- list(
+  "2016" = player_ids_15_16,
+  "2017" = player_ids_16_17,
+  "2018" = player_ids_17_18,
+  "2019" = player_ids_18_19,
+  "2020" = player_ids_19_20,
+  "2021" = player_ids_20_21,
+  "2022" = player_ids_21_22,
+  "2023" = player_ids_22_23,
+  "2024" = player_ids_23_24,
+  "2025" = player_ids_24_25
+)
+
+shot_sequences_all_withdist <- list()
+
+for (yr in pbp_years) {
+
+  pbp <- get(paste0("nba_pbp", yr))
+  player_ids <- player_ids_list[[as.character(yr)]]
+
+  seq_df <- make_shot_sequences_withdist(pbp, player_ids)
+
+  shot_sequences_all_withdist[[as.character(yr)]] <- seq_df
+
+  message(paste("Created shot sequences for season", yr))
+}
+```
+
+
+
+```{r}
+# function that computes overall average distance, opportunity average distance, and 
+# non-opportunity average distance
+get_distance_stats <- function(shots, distances, streak_length = 3){
+
+  n <- length(shots)
+
+  # not enough shots
+  if(n <= streak_length){
+
+    return(
+      tibble(
+        avg_all_dist = NA_real_,
+        avg_opp_dist = NA_real_,
+        avg_other_dist = NA_real_
+      )
+    )
+  }
+
+  # identify opportunity shots
+  opp_indicator <- sapply(
+    (streak_length + 1):n,
+    function(i){
+      all(shots[(i - streak_length):(i - 1)] == 1)
+    }
+  )
+
+  opp_index <- which(opp_indicator) + streak_length
+
+  # overall average
+  avg_all <- mean(distances, na.rm = TRUE)
+
+  # no opportunities case
+  if(length(opp_index) == 0){
+
+    return(
+      tibble(
+        avg_all_dist = avg_all,
+        avg_opp_dist = NA_real_,
+        avg_other_dist = avg_all
+      )
+    )
+  }
+
+  avg_opp <- mean(distances[opp_index], na.rm = TRUE)
+
+  other_index <- setdiff(seq_len(n), opp_index)
+
+  avg_other <- mean(distances[other_index], na.rm = TRUE)
+
+  tibble(
+    avg_all_dist = avg_all,
+    avg_opp_dist = avg_opp,
+    avg_other_dist = avg_other
+  )
+}
+```
+
+```{r}
+# Apply to all games
+distance_summary_all <- lapply(
+
+  names(shot_sequences_all_withdist),
+
+  function(yr){
+
+    df <- shot_sequences_all_withdist[[yr]]
+
+    df %>%
+
+      rowwise() %>%
+
+      mutate(
+
+        dist_stats = list(
+          get_distance_stats(
+            shots,
+            shot_dist,
+            streak_length = 3
+          )
+        )
+
+      ) %>%
+
+      tidyr::unnest(dist_stats) %>%
+
+      mutate(season_end = as.integer(yr)) %>%
+
+      ungroup()
+
+  }
+
+)
+```
+
+Combine:
+
+```{r}
+# Combine
+distance_summary_all <- dplyr::bind_rows(distance_summary_all)
+```
+
+Overall League Trend:
+
+```{r}
+distance_summary_all %>%
+  summarise(
+
+    # overall average distance
+    league_all = mean(avg_all_dist, na.rm=TRUE),
+    
+    # opportunity average distance
+    league_opp =
+    mean(avg_opp_dist, na.rm=TRUE),
+    
+    # non-opportunity average distance
+    league_other =
+    mean(avg_other_dist, na.rm=TRUE)
+    
+  )
+```
+
+Player-Level Trend
+
+```{r}
+distance_summary_all %>%
+  group_by(season_end, player) %>%
+  summarise(
+
+    opp_dist =
+    mean(avg_opp_dist, na.rm=TRUE),
+    
+    other_dist =
+    mean(avg_other_dist, na.rm=TRUE)
+    
+  )
+```
+
+Save above table to dataset:
+
+```{r}
+player_season_distance <- distance_summary_all %>%
+  group_by(season_end, player) %>%
+  summarise(
+    opp_dist = mean(avg_opp_dist, na.rm = TRUE),
+    other_dist = mean(avg_other_dist, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+player_season_distance <- player_season_distance %>%
+  mutate(dist_diff = opp_dist - other_dist)
+```
+
+```{r}
+# Mean of distance difference
+mean(player_season_distance$dist_diff, na.rm = TRUE)
+# Median of distance difference
+median(player_season_distance$dist_diff, na.rm = TRUE)
+# One-Sample T-Test of Difference in Differences
+t.test(player_season_distance$dist_diff, alternative = "greater")
+```
+
+T-Test is statistically significant. Players tend to shoot from farther distances on opportunity shots.
+
+
+Histogram of Differences in Shot Distance for Opportunity Shots and Non-Opportunity Shots
+```{r}
+ggplot(player_season_distance,
+       aes(x = dist_diff)) +
+
+  geom_histogram(
+    bins = 40,
+    fill = "#2C7FB8",   # nice blue
+    color = "white",
+    alpha = 0.9
+  ) +
+
+  geom_vline(
+    xintercept = 0,
+    linetype = "dashed",
+    linewidth = 1
+  ) +
+
+  labs(
+    x = "Opportunity Shot Distance − Other Shot Distance (Ft.)",
+    y = "Number of Player-Seasons",
+    title = "Average Difference in Shot Distances for Opportunity Shots and Non-Opportunity Shots"
+  ) +
+
+  theme_minimal()
+```
+
+Boxplots of Differences in Shot Distance for Opportunity Shots and Non-Opportunity Shots by Season
+
+```{r}
+ggplot(player_season_distance,
+       aes(x = factor(season_end),
+           y = dist_diff)) +
+
+  geom_boxplot(fill = "#74A9CF", alpha = .8) +
+
+  geom_hline(
+    yintercept = 0,
+    linetype = "dashed",
+    linewidth = 1
+  ) +
+
+  labs(
+    x = "Season (End Year)",
+    y = "Opportunity Distance − Other Distance (Ft.)",
+    title = "Difference in Shot Distances by Season"
+  ) +
+
+  theme_minimal()
+```
+
+```{r}
+player_season_distance <- player_season_distance %>%
+  arrange(desc(dist_diff))
+```
+
+```{r}
+ggplot(player_season_distance,
+       aes(x = other_dist,
+           y = opp_dist,
+           color = factor(season_end))) +
+
+ geom_point(alpha = .6) +
+
+ geom_abline(
+   slope = 1,
+   intercept = 0,
+   linetype = "dashed"
+ ) +
+
+ theme_minimal() +
+  scale_color_viridis_d() +
+  labs(
+    x = "Other Distance (Ft.)",
+    y = "Opportunity Distance (Ft.)",
+    title = "Average Opportunity Distance vs. Non-Opportunity Distance by Season",
+    color = "Season (End Year)"
+  )
+```
 
 
 #### Heatmaps
