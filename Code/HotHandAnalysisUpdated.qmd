@@ -858,6 +858,7 @@ combined_games <- combined_games %>%
 Adding null statistics and p-values for each game
 
 ```{r}
+set.seed(123)
 # Getting null stats using total_shots and total_makes
 null_from_counts <- function(total_shots, total_makes,
                              streak_length = 3,
@@ -897,6 +898,7 @@ null_from_counts <- function(total_shots, total_makes,
 ```
 
 ```{r}
+set.seed(123)
 # Computes nulls once per unique (total_shots, total_makes) pair
 # eliminates many unneccessary iterations
 null_lookup <- combined_games %>%
@@ -1442,6 +1444,8 @@ ggplot(player_season_distance,
 ```{r}
 player_season_distance <- player_season_distance %>%
   arrange(desc(dist_diff))
+
+head(player_season_distance)
 ```
 
 ```{r}
@@ -1469,11 +1473,149 @@ ggplot(player_season_distance,
 ```
 
 
-#### Heatmaps
-
-
+## Hierarchical Model
 
 #### Distance-Adjusted Opportunity Analysis
+
+```{r}
+# function to create shot-level data (one row per shot)
+make_shot_level <- function(season_df, season){
+
+  season_df %>%
+    mutate(
+
+      shot_index =
+        map(shots, seq_along),
+
+      is_opportunity =
+        map(shots, function(sh){
+
+          n <- length(sh)
+
+          if(n < 4)
+            return(rep(FALSE, n))
+
+          opp <- rep(FALSE, n)
+
+          for(i in 4:n){
+
+            if(all(sh[(i-3):(i-1)] == 1))
+              opp[i] <- TRUE
+
+          }
+
+          opp
+        })
+
+    ) %>%
+
+    mutate(
+
+      shot_data =
+        pmap(
+          list(
+            player,
+            athlete_id_1,
+            game_id,
+            shots,
+            shot_dist,
+            is_opportunity
+          ),
+
+          function(player,
+                   athlete_id_1,
+                   game_id,
+                   shots,
+                   shot_dist,
+                   is_opportunity){
+
+            tibble(
+
+              player = player,
+              athlete_id_1 = athlete_id_1,
+              game_id = game_id,
+              season_end = season,
+
+              make = shots,
+
+              shot_dist = shot_dist,
+
+              is_opportunity =
+                as.integer(is_opportunity)
+
+            )
+
+          }
+
+        )
+
+    ) %>%
+
+    select(shot_data) %>%
+
+    unnest(shot_data)
+
+}
+```
+
+```{r}
+# creating shot-level-data (one row per shot)
+shot_level_data <-
+  imap_dfr(
+    shot_sequences_all_withdist,
+    make_shot_level
+  )
+```
+
+```{r}
+# Adding shot categories to dataset based on shot distance
+shot_level_data <- shot_level_data %>%
+  mutate(
+    dist_category = case_when(
+      shot_dist <= 8 ~ "Close",
+      shot_dist <= 22 ~ "Midrange",
+      TRUE ~ "ThreePoint"
+    )
+  )
+
+shot_level_data$dist_category <-
+  factor(
+    shot_level_data$dist_category,
+    levels = c("Close","Midrange","ThreePoint")
+  )
+```
+
+```{r}
+# Aggregate the shots
+aggregated_shot_data <- shot_level_data %>%
+  group_by(
+    player, athlete_id_1, season_end, dist_category, is_opportunity
+    ) %>%
+  summarise(
+    attempts = n(),
+    makes = sum(make),
+    .makegroups = "drop"
+    )
+```
+
+```{r}
+library(glmmTMB)
+
+hierarchical_model <- glmmTMB(
+  cbind(makes, attempts - makes) ~
+    is_opportunity * dist_category +
+    (1 + is_opportunity || player) + # || removes correlation estimation
+    (1 | season_end),
+  family = binomial,
+  data = aggregated_shot_data
+)
+```
+
+```{r}
+summary(hierarchical_model)
+```
+
+
 
 ## Season-Long Trends
 
