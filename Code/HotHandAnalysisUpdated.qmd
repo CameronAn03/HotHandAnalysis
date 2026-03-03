@@ -25,6 +25,8 @@ library(stringi)
 library(kableExtra)
 library(scales)
 library(gitcreds)
+library(ggridges)
+library(glmmTMB)
 ```
 
 ```{r}
@@ -129,7 +131,7 @@ list2env(updated_list, envir = .GlobalEnv)
 
 ```
 
-Filtering Data by top 30 shooters in FGA per season
+Filtering Data by top 50 shooters in FGA per season
 
 ```{r}
 create_top50_datasets <- function(start_year = 2015, end_year = 2024) {
@@ -211,6 +213,7 @@ players18_19Ind[players18_19Ind == "Dennis Schr\xf6der"] <- "Dennis Schroder"
 players18_19Ind[players18_19Ind == "Luka Don?i?"] <- "Luka Doncic"
 players18_19Ind[players18_19Ind == "Bojan Bogdanovi?"] <- "Bojan Bogdanovic"
 players18_19Ind[players18_19Ind == "Nikola Joki?"] <- "Nikola Jokic"
+players19_20Ind[players19_20Ind == "Nikola Joki?"] <- "Nikola Jokic"
 players19_20Ind[players19_20Ind == "Luka Don?i?"] <- "Luka Doncic"
 players19_20Ind[players19_20Ind == "Bojan Bogdanovi?"] <- "Bojan Bogdanovic"
 players19_20Ind[players19_20Ind == "Kristaps Porzi??is"] <- "Kristaps Porzingis"
@@ -939,8 +942,6 @@ all_games_analysis <- combined_games %>%
 Ridge Plot of adj_diff by Season
 
 ```{r}
-library(ggridges)
-
 # Compute season means
 season_means <- all_games_analysis %>%
   group_by(season_end) %>%
@@ -978,8 +979,6 @@ all_games_analysis %>%
 Same as above using z-scores
 
 ```{r}
-library(ggridges)
-
 # Compute season means
 season_means_zscores <- all_games_analysis %>%
   group_by(season_end) %>%
@@ -1599,13 +1598,13 @@ aggregated_shot_data <- shot_level_data %>%
 ```
 
 ```{r}
-library(glmmTMB)
-
 hierarchical_model <- glmmTMB(
   cbind(makes, attempts - makes) ~
     is_opportunity * dist_category +
-    (1 + is_opportunity || player) + # || removes correlation estimation
-    (1 | season_end),
+    (1 + is_opportunity || player) + #+ # || removes correlation estimation
+    (1 | player:season_end), # treats 2016 Curry different than 2024 Curry
+    #(1 | player) +
+    #(1 | season_end),
   family = binomial,
   data = aggregated_shot_data
 )
@@ -1615,6 +1614,13 @@ hierarchical_model <- glmmTMB(
 summary(hierarchical_model)
 ```
 
+```{r}
+# player random effects
+player_effects <- ranef(hierarchical_model)$cond$player %>%
+  as.data.frame() %>%
+  #rownames_to_column(var = "player") %>%
+  arrange(desc(is_opportunity))
+```
 
 
 ## Season-Long Trends
