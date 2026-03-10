@@ -27,6 +27,7 @@ library(scales)
 library(gitcreds)
 library(ggridges)
 library(glmmTMB)
+library(brms)
 ```
 
 ```{r}
@@ -1601,7 +1602,7 @@ aggregated_shot_data <- shot_level_data %>%
 hierarchical_model <- glmmTMB(
   cbind(makes, attempts - makes) ~
     is_opportunity * dist_category +
-    (1 + is_opportunity || player) + #+ # || removes correlation estimation
+    (1 + is_opportunity || player) + # || removes correlation estimation
     (1 | player:season_end), # treats 2016 Curry different than 2024 Curry
     #(1 | player) +
     #(1 | season_end),
@@ -1618,8 +1619,97 @@ summary(hierarchical_model)
 # player random effects
 player_effects <- ranef(hierarchical_model)$cond$player %>%
   as.data.frame() %>%
-  #rownames_to_column(var = "player") %>%
+  rownames_to_column(var = "player") %>%
   arrange(desc(is_opportunity))
+```
+
+
+```{r}
+# Looking at distribution of shot distances to determine cutoffs
+ggplot(shot_level_data, aes(x = shot_dist, fill = factor(is_opportunity))) +
+  geom_density(alpha = 0.4) +
+  labs(fill = "Opportunity", x = "Shot Distance (Ft.)", y = "Density", title = "Density Plot of Shot Distance by Opportunity Status") +
+  coord_cartesian(xlim = c(0, 50)) +
+  scale_x_continuous(breaks = seq(0, 50, 5))
+
+sum(shot_level_data$is_opportunity == 1)# number of opportunity shots
+sum(shot_level_data$is_opportunity == 0) # number of non-opportunity shots
+```
+
+```{r}
+# Finding peaks of the density plots
+d <- density(shot_level_data$shot_dist)
+
+# find local maxima
+modes <- d$x[which(diff(sign(diff(d$y))) == -2) + 1]
+
+# for all shots
+modes 
+
+# by opportunity status
+get_modes <- function(x){
+  d <- density(x)
+  d$x[which(diff(sign(diff(d$y))) == -2) + 1]
+}
+
+tapply(shot_level_data$shot_dist, shot_level_data$is_opportunity, get_modes)
+```
+
+
+```{r}
+ggplot(shot_level_data, aes(x = factor(is_opportunity), y = shot_dist)) +
+  geom_boxplot() +
+  labs(x = "Opportunity", y = "Shot Distance", title = "Boxplot of Shot Distance by Opportunity Status")
+```
+
+## Time-Series Model 
+
+```{r}
+# adding shot number to data so we can see order of shots within player-game
+shot_level_data_seq <- shot_level_data %>%
+  arrange(player, game_id) %>%
+  group_by(player, game_id) %>%
+  mutate(shot_number = row_number()) %>%
+  ungroup()
+```
+
+
+```{r}
+ts.hierarchical <- brm(
+  make ~ is_opportunity * dist_category +
+         (1 | player) +
+         (1 | season_end),
+  family = bernoulli(),
+  data = shot_level_data_seq,
+  autocor = cor_ar(~ shot_number | player:game_id)
+)
+```
+
+
+```{r}
+shot_level_data_lags <- shot_level_data_seq %>%
+  arrange(player, game_id) %>%
+  group_by(player, game_id) %>%
+  mutate(
+    lag1 = lag(make, 1),
+    lag2 = lag(make, 2),
+    lag3 = lag(make, 3),
+    prev3_makes = ifelse(lag1 == 1 & lag2 == 1 & lag3 == 1, 1, 0)
+  ) %>%
+  mutate(
+    prev3_makes = ifelse(is.na(prev3_makes), 0, prev3_makes)) %>%
+  ungroup()
+```
+
+```{r}
+ts.lag <- glmmTMB(
+  make ~ prev3_makes +
+         is_opportunity * dist_category +
+         (1 + prev3_makes | player) +
+         (1 | season_end),
+  family = binomial,
+  data = shot_level_data_lags
+)
 ```
 
 
