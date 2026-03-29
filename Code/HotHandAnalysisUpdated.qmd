@@ -518,6 +518,28 @@ ggplot(SeasonAvgs, aes(x = season_end, y = FGA)) +
 
 ```
 
+Season vs. Percentage of Total FGA that were 3PA
+
+```{r}
+ggplot(SeasonTotals, aes(x = season_end, y = X3PA/FGA)) +
+  geom_point() +
+  geom_line(alpha = 0.4) +
+  geom_smooth(
+    method = "loess",
+    se = F,
+    linewidth = 1.2
+  ) + 
+  labs(
+    x = "Season (End Year)",
+    y = "Percentage",
+    title = "Trend in Three-Point Attempt Rate by Season",
+    subtitle = "Season is denoted as end year of season (e.g. 2025 = 2024-25)"
+  ) +
+  theme_minimal() +
+  scale_x_continuous(breaks = 2016:2025) +
+  scale_y_continuous(labels = function(x) sprintf("%.1f", x * 100))
+```
+
 Season vs. Pace per Game
 
 ```{r}
@@ -796,7 +818,7 @@ ggplot(season_summary_opportunities, aes(x = season_end, y = diff)) +
   labs(
     title = "Hot-Hand Advantage Over Baseline by Season",
     x = "Season (End Year)",
-    y = "Hot-hand 3P% − Baseline 3P%"
+    y = "Hot-hand FG% − Baseline FG%"
   ) +
   theme_minimal() +
   scale_x_continuous(
@@ -1621,6 +1643,31 @@ player_effects <- ranef(hierarchical_model)$cond$player %>%
   as.data.frame() %>%
   rownames_to_column(var = "player") %>%
   arrange(desc(is_opportunity))
+```
+
+Overall Shot Distance Distribution
+```{r}
+# Looking at distribution of shot distances to determine cutoffs
+ggplot(shot_level_data, aes(x = shot_dist)) +
+  geom_density(alpha = 0.8, fill = "grey70") +
+  geom_vline(xintercept = c(8, 22), linetype = "dashed", linewidth = 0.6) +
+  labs(x = "Shot Distance (feet)", y = "Density", title = "Distribution of Shot Distance with Category Cutoffs") +
+  coord_cartesian(xlim = c(0, 40)) +
+  scale_x_continuous(breaks = seq(0, 40, 2))
+```
+
+```{r}
+ggplot(shot_level_data, aes(x = shot_dist)) +
+  geom_density(fill = "grey70", color = "black", linewidth = 1, alpha = 0.6) +
+  geom_vline(xintercept = c(8, 24), linetype = "dashed", linewidth = 0.8) +
+  labs(
+    x = "Shot Distance (feet)",
+    y = "Density",
+    title = "Distribution of Shot Distance with Category Cutoffs"
+  ) +
+  coord_cartesian(xlim = c(0, 40)) +
+  scale_x_continuous(breaks = seq(0, 40, 5)) +
+  theme_minimal(base_size = 14)
 ```
 
 
