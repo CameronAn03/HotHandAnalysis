@@ -1741,22 +1741,24 @@ shot_level_data_lags <- shot_level_data_seq %>%
     lag1 = lag(make, 1),
     lag2 = lag(make, 2),
     lag3 = lag(make, 3),
-    prev3_makes = ifelse(lag1 == 1 & lag2 == 1 & lag3 == 1, 1, 0)
+    prev3_sum = lag1 + lag2 + lag3
   ) %>%
-  mutate(
-    prev3_makes = ifelse(is.na(prev3_makes), 0, prev3_makes)) %>%
   ungroup()
 ```
 
 ```{r}
 ts.lag <- glmmTMB(
-  make ~ prev3_makes +
+  make ~ prev3_sum +
          is_opportunity * dist_category +
-         (1 + prev3_makes | player) +
+         (1 + prev3_sum | player) +
          (1 | season_end),
   family = binomial,
   data = shot_level_data_lags
 )
+```
+
+```{r}
+summary(ts.lag)
 ```
 
 
