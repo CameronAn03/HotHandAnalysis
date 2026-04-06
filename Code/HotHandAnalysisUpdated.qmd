@@ -1058,7 +1058,92 @@ ggplot(results, aes(x = n, y = expected_value, color = factor(k))) +
   )
 ```
 
+```{r}
+# Cutting all_games_analysis to 30 games based on 3 different strata 
+# n -> [10, 20], [21, 35], or [36, 50]
 
+library(dplyr)
+
+set.seed(123)  # for reproducibility
+
+stratified_sample <- all_games_analysis %>%
+  # Keep only games with at least one opportunity
+  filter(n_opportunities > 0) %>%
+  
+  # Create strata based on total_shots
+  mutate(stratum = case_when(
+    total_shots >= 10 & total_shots <= 20 ~ "10-20",
+    total_shots >= 21 & total_shots <= 35 ~ "21-35",
+    total_shots >= 36 & total_shots <= 50 ~ "36-50",
+    TRUE ~ NA_character_
+  )) %>%
+  
+  # Remove rows not in desired strata
+  filter(!is.na(stratum)) %>%
+  
+  # Sample 10 from each stratum
+  group_by(stratum) %>%
+  slice_sample(n = 10) %>%
+  ungroup()
+```
+
+```{r}
+# making stratified table presentable
+stratified_sample <- stratified_sample %>%
+  select(player, season_end, game_id, total_shots, total_makes, n_opportunities, n_opportunity_makes,
+         opp_pct, other_attempts, other_makes, other_pct, diff, null_median, null_mean, null_sd, 
+         p_value, z_score, adj_diff) |>
+  rename(
+    Player = player,
+    Season = season_end,
+    `Game ID` = game_id,
+    `Number of shots` = total_shots,
+    `Number of makes` = total_makes,
+    `Number of opportunities` = n_opportunities,
+    `Number of opportunity makes` = n_opportunity_makes,
+    `Opportunity Proportion` = opp_pct,
+    `Number of other attempts` = other_attempts,
+    `Number of other attempt makes` = other_makes,
+    `Other Proportion` = other_pct,
+    `Difference in Proportions` = diff,
+    `Null median` = null_median,
+    `Null mean` = null_mean,
+    `Null SD` = null_sd,
+    `p-value` = p_value,
+    `z-score` = z_score,
+    `Adjusted Difference in Proportions` = adj_diff
+  ) |>
+  arrange(`Number of shots`)
+```
+
+```{r}
+# Dividing into 3 separate tables
+stratified_sample_short <- stratified_sample |>
+  filter(`Number of shots` <= 20)
+
+stratified_sample_med <- stratified_sample |>
+  filter(`Number of shots` >= 21 & `Number of shots` <= 35)
+
+stratified_sample_long <- stratified_sample |>
+  filter(`Number of shots` >= 36)
+```
+
+
+```{r}
+stratified_sample %>%
+  kable(
+    format = "html",
+    caption = "<div style='text-align:center; font-size:18px; font-weight:bold; color:black'>
+    Table _: Observed and Permutation Statistics for Games with Short Sequences (n = 10-20)</div>",
+    digits = 6,
+    align = 'c'
+  ) %>%
+  kable_styling(
+    full_width = FALSE,
+    bootstrap_options = c("striped", "hover", "condensed"),
+    font_size = 13
+  )
+```
 
 Ridge Plot of adj_diff by Season
 
@@ -1845,10 +1930,10 @@ shot_level_data_lags <- shot_level_data_seq %>%
 ```
 
 ```{r}
-ts.lag <- glmmTMB(
-  make ~ prev3_sum +
-         is_opportunity * dist_category +
-         (1 + prev3_sum | player) +
+# using is_opportunity
+mixed.opportunities <- glmmTMB(
+  make ~ is_opportunity * dist_category +
+         (1 + is_opportunity || player) + # || removes correlation parameter estimate
          (1 | season_end),
   family = binomial,
   data = shot_level_data_lags
@@ -1856,7 +1941,38 @@ ts.lag <- glmmTMB(
 ```
 
 ```{r}
-summary(ts.lag)
+summary(mixed.opportunities)
+```
+
+
+```{r}
+# using prev3_sum
+mixed.prev3 <- glmmTMB(
+  make ~ prev3_sum * dist_category +
+         (1 + prev3_sum || player) +
+         (1 | season_end),
+  family = binomial,
+  data = shot_level_data_lags
+)
+```
+
+```{r}
+summary(mixed.prev3)
+```
+
+```{r}
+# using lags
+mixed.lags <- glmmTMB(
+  make ~ lag1 + lag2 + lag3 + dist_category +
+         (1 | player) +
+         (1 | season_end),
+  family = binomial,
+  data = shot_level_data_lags
+)
+```
+
+```{r}
+summary(mixed.lags)
 ```
 
 
