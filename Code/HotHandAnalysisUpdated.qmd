@@ -962,6 +962,104 @@ all_games_analysis <- combined_games %>%
 
 ```
 
+Distribution of Number of Shots per Game:
+
+```{r}
+all_games_analysis |>
+  ggplot(aes(x = total_shots)) +
+  geom_histogram(bins = 40,
+                 fill = "#2C7FB8",   # nice blue
+                 color = "white",
+                 alpha = 0.9) +
+  labs(x = "Number of FGA per Game",
+       y = "Frequency",
+       title = "Total Number of Shots per Game for Qualified Players") +
+  annotate("text", x = 40, y = 4000, label = "Mean = 16.50") +
+  annotate("text", x = 40, y = 3700, label = "SD = 5.19")#+
+  #scale_x_continuous(limits = c(0, 40))
+```
+
+```{r}
+mean(all_games_analysis$total_shots)
+sd(all_games_analysis$total_shots)
+
+sum(all_games_analysis$total_shots > 40)
+
+sum(all_games_analysis$n_opportunities == 0) / nrow(all_games_analysis)
+```
+
+```{r}
+# trying to replicate Miller and Sanjurjo's biaschart using MCMC?
+
+compute_stat <- function(seq, k) {
+  n <- length(seq)
+  
+  streak_indices <- c()
+  
+  for (i in (k+1):n) {
+    if (all(seq[(i-k):(i-1)] == 1)) {
+      streak_indices <- c(streak_indices, i)
+    }
+  }
+  
+  if (length(streak_indices) == 0 || length(streak_indices) == n) {
+    return(NA)
+  }
+  
+  phat_streak <- mean(seq[streak_indices])
+  phat_others <- mean(seq[-streak_indices])
+  
+  return(phat_streak - phat_others)
+}
+```
+
+```{r}
+simulate_expectation <- function(n, k, p, n_sim = 10000) {
+  vals <- numeric(n_sim)
+  
+  for (i in 1:n_sim) {
+    seq <- rbinom(n, 1, p)
+    vals[i] <- compute_stat(seq, k)
+  }
+  
+  mean(vals, na.rm = TRUE)
+}
+```
+
+```{r}
+p_hat <- 0.4672788
+n_values <- seq(5, 50, by = 1)
+k_values <- 1:5
+
+results <- expand.grid(n = n_values, k = k_values) %>%
+  rowwise() %>%
+  mutate(
+    expected_value = simulate_expectation(n, k, p_hat)
+  ) %>%
+  ungroup()
+```
+
+```{r}
+ggplot(results, aes(x = n, y = expected_value, color = factor(k))) +
+  geom_line(linewidth = 1.2) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(
+    title = "Expected Value of Hot Hand Statistic Under Independence",
+    subtitle = paste0("Simulated with p = ", round(p_hat, 3)),
+    x = "Number of Shots in Sequence (n)",
+    y = expression(E[hat(p)[opp] - hat(p)[others]]),
+    color = "k (streak length)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5),
+    legend.position = "right"
+  )
+```
+
+
+
 Ridge Plot of adj_diff by Season
 
 ```{r}
@@ -2015,7 +2113,22 @@ season_level_results <- season_level_results %>%
 sum(season_level_results$pvalue < 0.05, na.rm = TRUE)
 ```
 
+
 Distribution of Hot Hand p-values
+
+```{r}
+ggplot(season_level_results, aes(x = p_value)) +
+  geom_histogram(binwidth = 0.05, boundary = 0, closed = "left",
+                 fill = "#4C78A8", color = "black", linewidth = 0.3) +
+  labs(
+    title = "Distribution of Hot Hand P-values",
+    x = "P-value",
+    y = "Frequency"
+  ) +
+  theme_minimal() +
+  geom_vline(xintercept = 0.05, linetype = "dashed", linewidth = 0.8, color = "red")
+```
+
 
 ```{r}
 ggplot(season_level_results, aes(x = pvalue)) +
@@ -2062,7 +2175,7 @@ ggplot(qq_df, aes(expected, observed)) +
   geom_point(size = 2, alpha = 0.7) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
   labs(
-    title = "QQ Plot of Hot Hand P-values",
+    title = "QQ Plot of Hot-Hand P-values",
     x = "Expected under Uniform(0,1)",
     y = "Observed p-values"
   ) +
@@ -2224,14 +2337,64 @@ appendix_table <- appendix_table %>%
 
 ```{r}
 appendix_table_top20 <- appendix_table %>%
-  slice_head(n = 20)
+  slice_head(n = 20) |>
+  rename(
+    Player = player,
+    Season = season,
+    `Number of shots` = n_shots,
+    `Number of successes` = n_successes,
+    `Number of runs` = n_runs,
+    `Proportion of S on trials following streaks` = phat_after_Sstreak,
+    `Proportion of S on all other trials` = phat_other_trials,
+    `Difference in Proportions` = diff_in_proportions,
+    `Null median` = null_median,
+    `Null mean` = null_mean,
+    `Null SD` = null_sd,
+    `p-value` = p_value,
+    `z-score` = z_score,
+  )
 
 
 appendix_table_top20 %>%
   kable(
     format = "html",
-    caption = "Top 20 Player–Seasons with the Lowest Permutation-Test p-values (Streak Length = 3)",
-    digits = 3
+    caption = "Top 20 Player–Seasons with Largest Degree of Hot Hand using k = 3 (sorted by p-value of the permuation test)",
+    digits = 6,
+    align = 'c'
+  ) %>%
+  kable_styling(
+    full_width = FALSE,
+    bootstrap_options = c("striped", "hover", "condensed")
+  )
+```
+
+```{r}
+appendix_table_top30 <- appendix_table %>%
+  slice_head(n = 30) |>
+  rename(
+    Player = player,
+    Season = season,
+    `Number of shots` = n_shots,
+    `Number of successes` = n_successes,
+    `Number of runs` = n_runs,
+    `Proportion of S on trials following streaks` = phat_after_Sstreak,
+    `Proportion of S on all other trials` = phat_other_trials,
+    `Difference in Proportions` = diff_in_proportions,
+    `Null median` = null_median,
+    `Null mean` = null_mean,
+    `Null SD` = null_sd,
+    `p-value` = p_value,
+    `z-score` = z_score,
+  )
+
+
+appendix_table_top30 %>%
+  kable(
+    format = "html",
+    caption = "<div style='text-align:center; font-size:18px; font-weight:bold; color:black'>
+    Top 30 Player–Seasons with Largest Degree of Hot Hand using k = 3 (sorted by p-value of the permuation test)</div>",
+    digits = 6,
+    align = 'c'
   ) %>%
   kable_styling(
     full_width = FALSE,
