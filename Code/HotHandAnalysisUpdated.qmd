@@ -427,6 +427,65 @@ for (yr in pbp_years) {
 
 ## Background Plots
 
+Combining all top 50 totals by season
+
+```{r}
+combine_seasons <- function(start_year = 15, end_year = 24) {
+  
+  map_dfr(start_year:end_year, function(y) {
+    
+    # Create dataset name (e.g., players15-16_top50)
+    next_y <- y + 1
+    df_name <- paste0("players", y, "-", next_y, "_top50")
+    
+    # Get dataset from environment
+    df <- get(df_name)
+    
+    # Add Season variable
+    df %>%
+      mutate(Season = paste0("20", y, "-", next_y))
+    
+  })
+}
+```
+
+
+```{r}
+all_players <- combine_seasons()
+
+all_players <- all_players |>
+  mutate(Season = factor(Season, levels = unique(Season)))
+```
+
+
+```{r}
+ggplot(all_players, aes(x = FGA, 
+                        y = forcats::fct_rev(Season), 
+                        fill = Season)) +
+  geom_density_ridges(scale = 1.2, alpha = 0.7, color = "black") +
+  labs(
+    title = "Distribution of Field Goal Attempts by Season",
+    x = "Field Goal Attempts (FGA)",
+    y = "Season"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  scale_fill_viridis_d()
+```
+
+```{r}
+all_players %>%
+  group_by(Season) %>%
+  summarise(
+    mean = mean(FGA, na.rm = TRUE),
+    sd = sd(FGA, na.rm = TRUE),
+    q25 = quantile(FGA, 0.25, na.rm = TRUE),
+    median = median(FGA, na.rm = TRUE),
+    q75 = quantile(FGA, 0.75, na.rm = TRUE)
+  )
+```
+
+
 Reading in Season Avg. Data
 
 ```{r}
@@ -989,7 +1048,7 @@ sum(all_games_analysis$n_opportunities == 0) / nrow(all_games_analysis)
 ```
 
 ```{r}
-# trying to replicate Miller and Sanjurjo's biaschart using MCMC?
+# trying to replicate Miller and Sanjurjo's bias chart using MCMC?
 
 compute_stat <- function(seq, k) {
   n <- length(seq)
@@ -1027,28 +1086,28 @@ simulate_expectation <- function(n, k, p, n_sim = 10000) {
 ```
 
 ```{r}
-p_hat <- 0.4672788
+p_values <- seq(0.4, 0.6, by = 0.05)
 n_values <- seq(5, 50, by = 1)
-k_values <- 1:5
+k_values <- 3
 
-results <- expand.grid(n = n_values, k = k_values) %>%
+results <- expand.grid(n = n_values, p = p_values) %>%
   rowwise() %>%
   mutate(
-    expected_value = simulate_expectation(n, k, p_hat)
+    expected_value = simulate_expectation(n_values, k_values, p_values)
   ) %>%
   ungroup()
 ```
 
 ```{r}
-ggplot(results, aes(x = n, y = expected_value, color = factor(k))) +
+ggplot(results, aes(x = n, y = expected_value, color = factor(sprintf("%.2f", p)))) +
   geom_line(linewidth = 1.2) +
   geom_hline(yintercept = 0, linetype = "dashed") +
   labs(
     title = "Expected Value of Hot Hand Statistic Under Independence",
-    subtitle = paste0("Simulated with p = ", round(p_hat, 3)),
+    subtitle = paste0("Simulated with k = 3"),
     x = "Number of Shots in Sequence (n)",
     y = expression(E[hat(p)[opp] - hat(p)[others]]),
-    color = "k (streak length)"
+    color = "Success Probability"
   ) +
   theme_minimal(base_size = 13) +
   theme(
@@ -1974,6 +2033,146 @@ mixed.lags <- glmmTMB(
 ```{r}
 summary(mixed.lags)
 ```
+
+## Hierarchical Model Simulation for Coefficients
+
+```{r}
+# simulating data to see magnitude of bias
+library(tidyverse)
+
+n <- 100
+p <- 0.5
+
+n_outer <- 100
+n_perm <- 100
+
+out <- replicate(n_outer, {
+  y <- rbinom(n, 1, p)
+ 
+  betas <- replicate(n_perm, {
+    y_perm <- sample(y)
+   
+    df <- tibble::tibble(y = y_perm) |>
+      dplyr::mutate(
+        opportunity = as.integer(
+          dplyr::lag(y, 1, default = 0) == 1 &
+          dplyr::lag(y, 2, default = 0) == 1 &
+          dplyr::lag(y, 3, default = 0) == 1
+        )
+      )
+   
+    fit <- try(glm(y ~ opportunity, data = df, family = binomial), silent = TRUE)
+    if (inherits(fit, "try-error")) return(NA_real_)
+   
+    b <- coef(fit)["opportunity"]
+    if (is.na(b) || !is.finite(b)) return(NA_real_)
+    unname(b)
+  })
+ 
+  c(n_success = sum(y), mean_beta = mean(betas, na.rm = TRUE))
+})
+
+results <- as.data.frame(t(out))
+
+hist(results$mean_beta)
+
+plot(results$n_succes / n, results$mean_beta)
+
+summary(results$mean_beta)
+```
+
+### Bias-Adjusted Opportunity Coefficient for Real Data
+
+```{r}
+obs_beta <- fixef(mixed.opportunities)$cond["is_opportunity"]
+```
+
+```{r}
+# permutation function
+
+compute_opportunity <- function(y) {
+  as.integer(
+    dplyr::lag(y, 1, default = 0) == 1 &
+    dplyr::lag(y, 2, default = 0) == 1 &
+    dplyr::lag(y, 3, default = 0) == 1
+  )
+}
+
+permute_once <- function(df) {
+  df_perm <- df %>%
+    group_by(game_id) %>%
+    arrange(shot_number, .by_group = TRUE) %>%
+    mutate(make = sample(make)) %>%   # shuffle within game
+    mutate(is_opportunity = compute_opportunity(make)) %>%
+    ungroup()
+  
+  fit <- try(
+    glmmTMB(
+      make ~ is_opportunity * dist_category +
+        (1 + is_opportunity || player) +
+        (1 | season_end),
+      family = binomial,
+      data = df_perm
+    ),
+    silent = TRUE
+  )
+  
+  if (inherits(fit, "try-error")) return(NA_real_)
+  
+  beta <- fixef(fit)$cond["is_opportunity"]
+  if (is.na(beta) || !is.finite(beta)) return(NA_real_)
+  
+  return(beta)
+}
+```
+
+```{r}
+# run permutations
+set.seed(123)
+
+n_perm <- 100  # start small, increase later
+
+perm_betas <- replicate(n_perm, permute_once(shot_level_data_seq))
+
+perm_betas <- perm_betas[!is.na(perm_betas)]
+```
+
+```{r}
+shot_level_data_seq |>
+  group_by(game_id, athlete_id_1) %>%
+  arrange(shot_number, .by_group = TRUE) %>%
+  head(n=5)
+
+df_perm <- df %>%
+    group_by(game_id) %>%
+    arrange(shot_number, .by_group = TRUE) %>%
+    mutate(make = sample(make)) %>%   # shuffle within game
+    mutate(is_opportunity = compute_opportunity(make)) %>%
+    ungroup()
+```
+
+
+#### Analyze Results
+
+```{r}
+# bias estimate
+mean_perm <- mean(perm_betas)
+
+# bias-adjusted coefficient
+beta_adj <- obs_beta - mean_perm
+
+# Permutation p-value
+p_val <- mean(perm_betas >= obs_beta)
+```
+
+Visualization
+
+```{r}
+# Visualization
+hist(perm_betas, main = "Null Distribution of Opportunity Coefficient")
+abline(v = obs_beta, col = "red", lwd = 2)
+```
+
 
 
 ## Season-Long Trends
