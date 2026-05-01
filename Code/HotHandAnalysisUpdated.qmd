@@ -1093,7 +1093,7 @@ k_values <- 3
 results <- expand.grid(n = n_values, p = p_values) %>%
   rowwise() %>%
   mutate(
-    expected_value = simulate_expectation(n_values, k_values, p_values)
+    expected_value = simulate_expectation(n, k_values, p)
   ) %>%
   ungroup()
 ```
@@ -2084,93 +2084,241 @@ summary(results$mean_beta)
 ### Bias-Adjusted Opportunity Coefficient for Real Data
 
 ```{r}
-obs_beta <- fixef(mixed.opportunities)$cond["is_opportunity"]
+# making distributions of game stats
+
+vars_to_plot <- c(
+  "n_opportunities",
+  "opp_pct",
+  "diff",
+  "total_shots"
+)
+
+plot_data <- all_games_analysis %>%
+  select(all_of(vars_to_plot)) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "value"
+  )
+
+summary_lines <- plot_data %>%
+  group_by(variable) %>%
+  summarise(
+    q25 = quantile(value, 0.25, na.rm = TRUE),
+    med = quantile(value, 0.50, na.rm = TRUE),
+    q75 = quantile(value, 0.75, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+ggplot(plot_data, aes(x = value)) +
+  geom_density(fill = "skyblue", alpha = 0.4) +
+  geom_vline(data = summary_lines, aes(xintercept = q25), linetype = "dashed") +
+  geom_vline(data = summary_lines, aes(xintercept = med), linetype = "solid") +
+  geom_vline(data = summary_lines, aes(xintercept = q75), linetype = "dashed") +
+  facet_wrap(~ variable, scales = "free", ncol = 3) +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = "Distributions of key game-level variables with quartiles",
+    x = NULL,
+    y = "Density"
+  )
 ```
 
 ```{r}
-# permutation function
+# getting quantiles of important stats to help build representatitve sample
 
-compute_opportunity <- function(y) {
-  as.integer(
-    dplyr::lag(y, 1, default = 0) == 1 &
-    dplyr::lag(y, 2, default = 0) == 1 &
-    dplyr::lag(y, 3, default = 0) == 1
-  )
-}
+vars <- c("diff", "n_opportunities", "opp_pct", "total_shots")
 
-permute_once <- function(df) {
-  df_perm <- df %>%
-    group_by(game_id) %>%
-    arrange(shot_number, .by_group = TRUE) %>%
-    mutate(make = sample(make)) %>%   # shuffle within game
-    mutate(is_opportunity = compute_opportunity(make)) %>%
-    ungroup()
-  
-  fit <- try(
-    glmmTMB(
-      make ~ is_opportunity * dist_category +
-        (1 + is_opportunity || player) +
-        (1 | season_end),
-      family = binomial,
-      data = df_perm
-    ),
-    silent = TRUE
+all_games_analysis %>%
+  select(all_of(vars)) %>%
+  pivot_longer(cols = everything(), names_to = "variable", values_to = "value") %>%
+  group_by(variable) %>%
+  summarise(
+    q0   = quantile(value, 0, na.rm = TRUE),
+    q25  = quantile(value, 0.25, na.rm = TRUE),
+    q50  = round(quantile(value, 0.50, na.rm = TRUE), 3),
+    q75  = round(quantile(value, 0.75, na.rm = TRUE), 3),
+    q90  = round(quantile(value, 0.90, na.rm = TRUE), 3),
+    q95  = round(quantile(value, 0.95, na.rm = TRUE), 3),
+    q100 = round(quantile(value, 1, na.rm = TRUE), 3),
+    .groups = "drop"
   )
-  
-  if (inherits(fit, "try-error")) return(NA_real_)
-  
-  beta <- fixef(fit)$cond["is_opportunity"]
-  if (is.na(beta) || !is.finite(beta)) return(NA_real_)
-  
-  return(beta)
-}
 ```
 
 ```{r}
-# run permutations
+# Creating random sample of 100 games
 set.seed(123)
 
-n_perm <- 100  # start small, increase later
+sample_game_ids <- all_games_analysis %>%
+  distinct(game_id) %>%
+  slice_sample(n = 100) %>%
+  pull(game_id)
 
-perm_betas <- replicate(n_perm, permute_once(shot_level_data_seq))
+sample_games <- shot_level_data_lags %>%
+  filter(game_id %in% sample_game_ids)
+```
 
-perm_betas <- perm_betas[!is.na(perm_betas)]
+
+```{r}
+# obtaining opportunity beta for my 100 randomly sampled games (preserving original order)
+obs_fit <- glmmTMB(
+  make ~ is_opportunity * dist_category +
+    (1 + is_opportunity || player) + 
+    (1 | season_end),
+  data = sample_games,
+  family = binomial
+)
+
+# obtained the observed beta
+obs_beta <- fixef(obs_fit)$cond["is_opportunity"]
+obs_beta
 ```
 
 ```{r}
-shot_level_data_seq |>
-  group_by(game_id, athlete_id_1) %>%
-  arrange(shot_number, .by_group = TRUE) %>%
-  head(n=5)
-
-df_perm <- df %>%
-    group_by(game_id) %>%
-    arrange(shot_number, .by_group = TRUE) %>%
-    mutate(make = sample(make)) %>%   # shuffle within game
-    mutate(is_opportunity = compute_opportunity(make)) %>%
+# function for shuffling rows and refitting hierarchical model
+permute_and_fit <- function(dat) {
+  dat_perm <- dat %>%
+    group_by(game_id, player) %>%
+    slice_sample(prop = 1, replace = F) %>%
+    mutate(shot_number_perm = row_number()) %>%
+    ungroup() %>%
+    arrange(game_id, player, shot_number_perm) %>%
+    group_by(game_id, player) %>%
+    mutate(
+      lag1 = lag(make, 1, default = 0),
+      lag2 = lag(make, 2, default = 0),
+      lag3 = lag(make, 3, default = 0),
+      is_opportunity = as.integer(lag1 == 1 & lag2 == 1 & lag3 == 1)
+    ) %>%
     ungroup()
+
+  fit <- tryCatch(
+    glmmTMB(
+      make ~ is_opportunity * dist_category +
+        (1 + is_opportunity || player) + 
+        (1 | season_end),
+      data = dat_perm,
+      family = binomial
+    ),
+    error = function(e) return(NA)
+  )
+
+  if (is.na(fit)[1]) return(NA_real_)
+
+  beta <- fixef(fit)$cond["is_opportunity"]
+  if (!is.finite(beta)) return(NA_real_)
+  
+  unname(beta)
+}
+```
+
+```{r}
+set.seed(123)
+
+n_perm <- 10000
+
+perm_betas <- map_dbl(1:n_perm, ~ permute_and_fit(sample_games))
+
+perm_betas_clean <- perm_betas[is.finite(perm_betas)]
+```
+
+```{r}
+mean_perm_beta <- mean(perm_betas_clean)
+sd_perm_beta <- sd(perm_betas_clean)
+
+obs_beta
+mean_perm_beta
+sd_perm_beta
+
+
+```
+
+```{r}
+hist(perm_betas_clean)
+mean(perm_betas_clean >= obs_beta)
 ```
 
 
-#### Analyze Results
-
 ```{r}
-# bias estimate
-mean_perm <- mean(perm_betas)
+dat_perm <- sample_games %>%
+  group_by(game_id, player) %>%
+  slice_sample(prop = 1, replace = F) %>%
+  mutate(shot_number_perm = row_number()) %>%
+  ungroup() %>%
+  arrange(game_id, player, shot_number_perm) %>%
+  group_by(game_id, player) %>%
+  mutate(
+    lag1 = lag(make, 1, default = 0),
+    lag2 = lag(make, 2, default = 0),
+    lag3 = lag(make, 3, default = 0),
+    is_opportunity = as.integer(lag1 == 1 & lag2 == 1 & lag3 == 1)
+  ) %>%
+  ungroup()
 
-# bias-adjusted coefficient
-beta_adj <- obs_beta - mean_perm
-
-# Permutation p-value
-p_val <- mean(perm_betas >= obs_beta)
+table(dat_perm$is_opportunity)
+table(dat_perm$is_opportunity, dat_perm$dist_category)
 ```
 
-Visualization
+#### Extreme Games Analysis
 
 ```{r}
-# Visualization
-hist(perm_betas, main = "Null Distribution of Opportunity Coefficient")
-abline(v = obs_beta, col = "red", lwd = 2)
+# Gathering top 20 most extreme games for each of these statistics
+top_n <- 20
+
+extreme_opportunities <- all_games_analysis %>%
+  slice_max(n_opportunities, n = top_n)
+
+extreme_diff <- all_games_analysis %>%
+  slice_max(abs(diff), n = top_n)
+
+extreme_adj_diff <- all_games_analysis %>%
+  slice_max(abs(adj_diff), n = top_n)
+
+extreme_z <- all_games_analysis %>%
+  slice_max(abs(z_score), n = top_n)
+
+extreme_p <- all_games_analysis %>%
+  slice_min(p_value, n = top_n)
+```
+
+```{r}
+# creating extreme games dataset by binding all these games together
+extreme_games <- bind_rows(
+  extreme_opportunities,
+  extreme_diff,
+  extreme_adj_diff,
+  extreme_z,
+  extreme_p
+) %>%
+  distinct(game_id, athlete_id_1, .keep_all = TRUE)
+
+extreme_games_ids <- extreme_games |>
+  pull(game_id)
+
+extreme_games <- shot_level_data_lags %>%
+  filter(game_id %in% extreme_games_ids)
+```
+
+```{r}
+set.seed(123)
+
+n_perm <- 2000
+
+# running permutations for extreme games dataset
+perm_betas_extreme <- map_dbl(1:n_perm, ~ permute_and_fit(extreme_games))
+
+perm_betas_extreme_clean <- perm_betas_extreme[is.finite(perm_betas_extreme)]
+```
+
+```{r}
+mean_perm_extreme_beta <- mean(perm_betas_extreme_clean)
+sd_perm_extreme_beta <- sd(perm_betas_extreme_clean)
+
+obs_beta
+mean_perm_extreme_beta
+sd_perm_extreme_beta
+
+
 ```
 
 
