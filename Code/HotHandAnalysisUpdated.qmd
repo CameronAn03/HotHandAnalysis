@@ -2295,6 +2295,7 @@ extreme_games <- bind_rows(
 extreme_games_ids <- extreme_games |>
   pull(game_id)
 
+# creating extreme_games dataset that has one row for each shot in chosen extreme games
 extreme_games <- shot_level_data_lags %>%
   filter(game_id %in% extreme_games_ids)
 ```
