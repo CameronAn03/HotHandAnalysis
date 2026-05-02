@@ -588,7 +588,256 @@ These results can be compared to the null statistics of each observed shot seque
 
 ## Bias-Adjusted Streak Statistic
 
-The permutation test was run for all shot sequences in the sample. Sequences with zero opportunities were assigned a p-value of NA.
+The permutation test was run for all shot sequences in the sample. Sequences with zero opportunities were assigned a p-value of NA. Table __ in the Appendix contains a sample of 30 games and the collected statistics through the permutation tests. To visualize the effect of different sample sizes on the null distribution, three games of different sample sizes were collected. The three selected games contained 13, 16, and 20 shots to represent Q1, the median, and Q3, respectively. Each game had a streak statistic of -0.5 for consistency. The null distributions along with their corresponding p-value are shown in Table __ below.
+
+
+```{r}
+#| label: perm-test-results-table
+#| echo: false
+#| tbl-cap: "Bias-Adjusted Streak Statistic for Different Sample Sizes"
+
+all_games_analysis |>
+  filter(player %in% c("Jordan Clarkson", "Tobias Harris", "Kyle Kuzma"),
+         game_id %in% c(401267657, 400975574, 401468533)) |>
+  select(player, game_id, total_shots, total_makes, opp_pct, diff, null_mean, adj_diff, p_value) |>
+  arrange(desc(total_shots)) |>
+  mutate(null_mean = round(null_mean, 3),
+         adj_diff = round(adj_diff, 3),
+         p_value = round(p_value, 3)) |>
+  kable(col.names = c("Player", "Game ID", "Total Shots", "Total Makes", "Opportunity Percentage", "Difference in Proportions", "Null Mean", "Adjusted Difference in Proportions", "P-value"))
+```
+
+The *Difference in Proportions* column represents the streak statistic, defined as the difference between the proportion of makes on opportunity shots and the proportion of makes on all other shots. However, this statistic is subject to the bias discovered by Miller & Sanjurjo (2018). The *Adjusted Difference in Proportions* column corrects this statistic by subtracting the null mean obtained from the observed streak statistic. This adjustment accounts for bias in the original streak statistic, yielding a bias-adjusted streak statistic.
+
+As expected, the null means generally seem to decrease as the number of shots increase, although some trend deviation remains due to differences in field goal percentages across games (Figure __, Appendix). The average null mean across all games with at least one opportunity was approximately -0.229, indicating a substantial bias in the streak statistic. This estimated bias agrees with the results obtained from the Monte Carlo simulation, as our overall success probability was approximately 0.467 and the average number of shots taken per game was approximately 16.5. The null standard deviations are relatively large compared to the season-long analysis, reflecting the high variability inherent in short shot sequences. Because many games contain a limited number of opportunities, the field goal percentage on those opportunities can vary substantially, leading to highly volatile streak statistics. For example, in games with only one opportunity, the opportunity field goal percentage can take on only two values (0 or 1). As a result, the streak statistic is highly discrete, and the corresponding permutation distribution is characterized by a small set of possible values that can differ markedly from one another, contributing to considerable variability in the null distribution. Consequently, games with few opportunities will also have lower statistical power, making it more difficult to detect meaningful hot-hand trends.
+
+## Game-Level Results
+
+Overall, only 562 out of 20,865 games (approximately 2.69%) that included at least one opportunity produced a statistically significant streak statistic at the α = 0.05 significance level. This proportion is lower than what would be expected under the assumption of independence, providing little evidence in support of a within-game hot-hand effect. Furthermore, the mean of the *Adjusted Difference in Proportions* column across all games with at least one opportunity was approximately -0.0136, indicating that, on average, players performed slightly worse on opportunity shots than would be expected under independence.
+
+Figure __ provides the distributions of the bias-adjusted streak statistic by season. The distributions appear largely consistent across seasons, exhibiting similar bimodal shapes and comparable peak locations. In particular, each season shows two prominent peaks centered at approximately -0.25 and 0.25. The black points denote the seasonal means of the null-adjusted streak statistic, which are generally centered slightly below zero. This aligns with the previous finding that players tend to perform marginally worse on opportunity shots relative to other shots after adjusting for the bias. One exception is the 2018-19 season in which the mean appears slightly above zero, suggesting a small, though likely negligible, positive hot-hand effect. The similarity between the distributions suggests little evidence of systematic seasonal differences in hot-hand effects.
+
+```{r}
+#| label: null-adjusted-ridge-figure
+#| echo: false
+#| fig-cap: "Bias-Adjusted Streak Statistic Distributions by Season."
+#| message: false
+
+# Compute season means
+season_means <- all_games_analysis %>%
+  group_by(season_end) %>%
+  summarise(mean_adj = mean(adj_diff, na.rm = TRUE))
+
+# Create factor levels for y-axis
+season_levels <- factor(sort(unique(all_games_analysis$season_end)))
+
+# Plot
+all_games_analysis %>%
+  filter(!is.na(adj_diff)) %>%
+  ggplot(aes(
+    x = adj_diff, 
+    y = factor(season_end),
+    fill = factor(season_end)
+  )) +
+  geom_density_ridges(scale = 1.2, alpha = 0.7, color = "black") +
+  geom_point(
+    data = season_means,
+    aes(
+      x = mean_adj,
+      y = factor(season_end, levels = rev(levels(season_levels)))
+    ),
+    size = 2
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  labs(x = "Difference in FG% on Opportunities vs. Other Shots (Null-Adjusted)", y = "Season",
+       title = "Seasonal Differences: FG% on Opportunities vs. Other Shots (Null-Adjusted)") +
+  scale_fill_viridis_d() +
+  scale_x_continuous(labels = scales::percent_format(accuracy = 1)) # x-axis as percentages
+
+```
+
+The observed bimodality can be explained by the structure of the streak statistic that results from small shot sequences. Because many games contain few opportunities, the opportunity field goal percentage is often either very low (e.g., 0) or moderate (e.g., around 0.5), while the field goal percentage on other shots is typically near 0.5, reflecting both the larger number of “other” shot attempts in each game and the fact that league-wide field goal percentages tend to be close to this value. Consequently, the unadjusted streak statistic frequently takes values near -0.5 or 0. Figure __ displays this pattern by using the three previously sampled games which contained different numbers of total shots and successful shots. The null distributions reveal points clustering at approximately -0.5 and 0, confirming our previous intuition. 
+
+
+```{r}
+#| include: false
+
+perm_test_streak <- function(n, m, obs_stat, B = 10000, k = 3) {
+  
+  library(ggplot2)
+  
+  # helper function to compute streak statistic
+  compute_stat <- function(x, k = 3) {
+    n <- length(x)
+    
+    opp_idx <- rep(FALSE, n)
+    
+    # identify opportunity shots
+    for (i in (k + 1):n) {
+      if (all(x[(i - k):(i - 1)] == 1)) {
+        opp_idx[i] <- TRUE
+      }
+    }
+    
+    # need at least one opportunity
+    if (sum(opp_idx) == 0) return(NA)
+    
+    p_opp <- mean(x[opp_idx])
+    p_non <- mean(x[!opp_idx])
+    
+    p_opp - p_non
+  }
+  
+  # simulate null distribution
+  null_stats <- replicate(B, {
+    x <- sample(c(rep(1, m), rep(0, n - m)))
+    compute_stat(x, k)
+  })
+  
+  null_stats <- na.omit(null_stats)
+  
+  # p-value (right-tailed)
+  p_value <- mean(null_stats >= obs_stat)
+  
+  # prepare data for plotting
+  df <- data.frame(stat = null_stats)
+  
+  # calculate mean of null distribution
+  mu <- mean(null_stats)
+  
+  # plot
+  p <- ggplot(df, aes(x = stat)) +
+    geom_histogram(aes(y = ..density..),
+                   bins = 50,
+                   fill = "#2C7FB8",
+                   color = "black") +
+    labs(
+      title = paste0("Null Distribution of Streak Statistic (k = ", k, ")"),
+      subtitle = paste0("n = ", n, ", m = ", m),
+      x = "Streak Statistic",
+      y = "Density"
+    ) +
+    theme_minimal(base_size = 13) +
+    annotate(
+      "text",
+      x = 0.5,
+      y = 14,
+      label = paste0("Mean = ", round(mu, 3)),
+      vjust = 2,
+      color = "black"
+    )
+  
+  return(list(
+    null_distribution = null_stats,
+    plot = p
+  ))
+}
+```
+
+```{r}
+#| include: false
+set.seed(123)
+result <- perm_test_streak(
+  n = 16,
+  m = 8,
+  obs_stat = 0.08,
+  B = 10000
+)
+
+result$plot
+```
+
+```{r}
+#| include: false
+
+set.seed(123)
+
+res1 <- perm_test_streak(n = 13, m = 6, obs_stat = 0.08) # obs_stat doesn't matter
+res2 <- perm_test_streak(n = 16, m = 7, obs_stat = 0.05)
+res3 <- perm_test_streak(n = 20, m = 9, obs_stat = 0.03)
+
+res1_df <- data.frame(
+  stat = res1$null_distribution,
+  scenario = "n=13, m=6"
+)
+
+res2_df <- data.frame(
+  stat = res2$null_distribution,
+  scenario = "n=16, m=7"
+)
+
+res3_df <- data.frame(
+  stat = res3$null_distribution,
+  scenario = "n=20, m=9"
+)
+
+df_all <- rbind(res1_df, res2_df, res3_df)
+```
+
+```{r}
+#| include: false
+
+mean_df <- aggregate(stat ~ scenario, data = df_all, FUN = mean)
+
+label_df <- aggregate(stat ~ scenario, data = df_all, FUN = function(x) {
+  c(mean = mean(x), y = max(density(x)$y))
+})
+
+label_df <- data.frame(
+  scenario = label_df$scenario,
+  mean = label_df$stat[, "mean"],
+  y = label_df$stat[, "y"]
+)
+```
+
+```{r}
+#| include: false
+
+mean_df <- data.frame(
+  scenario = c("n=13, m=6",
+               "n=16, m=7",
+               "n=20, m=9"),
+  
+  mean = c(-0.292, -0.242, -0.235)
+)
+
+mean_df$x <- 0.4
+mean_df$y <- 20 
+```
+
+
+```{r}
+#| label: null-panel-plot-figure
+#| echo: false
+#| fig-cap: "Null Distributions of Streak Statistic under Different Scenarios."
+#| message: false
+
+ggplot(df_all, aes(x = stat)) +
+  geom_histogram(aes(y = ..density..),
+                 bins = 50,
+                 fill = "#2C7FB8",
+                 color = "black") +
+  facet_wrap(~scenario, scales = "fixed") +
+  labs(
+    title = "Null Distributions of Streak Statistic",
+    x = "Streak Statistic",
+    y = "Density"
+  ) +
+  theme_minimal(base_size = 13) +
+  geom_text(
+    data = mean_df,
+    aes(x = x, y = y,
+        label = paste0("Mean = ", mean)),
+    #hjust = -1, 
+    #vjust = 1.2,
+    color = "black",
+    size = 4
+  )
+```
+
+After adjusting for the null mean (approximately -0.23), these values shift to around -0.25 and 0.25, producing the observed peaks. This pattern reflects the high variability of the statistic rather than systematic differences across seasons, providing little evidence of a meaningful season-specific hot-hand effect. 
+
 
 
 # Conclusion
