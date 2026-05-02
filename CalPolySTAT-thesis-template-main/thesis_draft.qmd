@@ -31,37 +31,282 @@ format:
 
 # I recommend having a hidden code chunk to prep any packages or data sets!
 
+library(broom)
+library(dplyr)
+library(forcats)
+library(ggplot2)
+library(here)
+library(hoopR)
+library(knitr)
 library(tidyverse)
+library(stringr)
+library(tidyr)
+library(purrr)
+library(stringr)
+library(stringi)
 library(kableExtra)
-
-data("starwars")
+library(scales)
+library(gitcreds)
+library(ggridges)
+library(glmmTMB)
+library(brms)
 ```
 
-# Literature Review
+# Introduction
 
 There will probably be lots of citations here for many articles or even software like R [@r_core_team_r_2024].
 
-# Analysis
+The concept of the hot hand in basketball has been fiercely debated among audiences spanning many decades. Fans and players often describe the phenomenon as reaching an elevated state of play following a streak of recent success. One general notion of hot-hand shooting posits that players tend to make a higher percentage of shots relative to their baseline shooting ability following a recent streak of made shots. Proponents of the hot hand argue that the physical and psychological benefits of witnessing a streak of success place players “in rhythm”, a state of increased confidence and ability that may increase the chances of making a shot. Former Golden State Warriors player Purvis Short described the experience of being “hot” as follows: “You’re in a world all your own. It’s hard to describe. But the basket seems to be so wide. No matter what you do, you know the ball is going in” (Short, as quoted in Tversky & Gilovich, 1a 989). However, opponents argue that these experiences may reflect cognitive biases, suggesting that apparent streaks may arise purely from random variation. These perspectives highlight the intuitive appeal of the hot-hand phenomenon, raising the question of whether perceived streaks in performance reflect underlying changes in ability under unique circumstances or simply arise from chance.
 
-## How to Add Figures
+
+# Background
+
+## Previous Literature
+
+Statistical research has questioned whether the hot hand truly exists, despite widespread belief from fans, players, and the general public. In a seminal study, Gilovich, Vallone, and Tversky (1985), examined streak-shooting tendencies to determine if observed streaks exceeded those expected under randomness. The sample data consisted of field goal attempts from 48 home games of 76ers players and their opponents during the 1980-81 season. The first section of their analysis used conditional proportions to examine players’ shooting percentages conditional on the outcome of previous shots. For each of nine players on the 76ers, Gilovich, Vallone, and Tversky computed the overall shooting proportion as well as conditional shooting proportions based on whether the previous one, two, or three shots were successful. They also estimated the serial correlation between the outcomes of successive shots to determine if there existed any dependence structure within a player’s shot sequence. A “success”, or “hit”, was defined as a made shot. The authors discovered that only one out of the nine sampled players possessed a higher success rate on shots following a make compared to their overall success rate. Furthermore, eight out of nine players exhibited a negative serial correlation value, none of which being significantly different from zero. 
+
+The findings in this paper contributed to the characterization of the hot hand as a myth, which researchers attribute to a cognitive fallacy whereby individuals misinterpret random streaks as performance trends (Gilovich et al., 1985). A potential explanation for such a phenomenon involves memory bias, the idea that observers are likely to overestimate the dependence of sequential shots due to long sequences of successes (or failures) being more memorable than alternating successes and failures (Gilovich et al., 1985). Other studies have since expanded upon the analysis in Gilovich et al., (1985), yielding similar results of a lack of hot-hand effect (Koehler & Conley, 2003; McNair et al., 2020; Lantis & Nesson, 2021).
+
+However, recent research has revisited the validity of the methods used in Gilovich et al. (1985). In particular, Miller and Sanjurjo (2018) identified a flaw in the conditional proportion analysis used in the 1985 paper. The flaw stems from a systematic bias in the analysis of conditional shooting percentages within finite shot sequences, which ultimately resulted in an underestimation of the true hot hand effect. Miller & Sanjurjo (2018) formally demonstrated the downward bias in conditional proportion estimators by analyzing all possible permutations of short finite sequences of independent binary outcomes. In their example using three consecutive coin flips, they examine the proportion of heads following a previous head under the assumption of independence. A calculation of the conditional proportion estimator revealed that the expected proportion of heads conditioned on a previous head is equal to $\frac{5}{12}$, notably lower than the suspected 0.5, illustrating the systematic downward bias introduced by conditioning on finite sequences (Miller & Sanjurjo, 2018).
+
+Miller and Sanjurjo applied the coin-flipping framework to demonstrate bias in the methodology of Gilovich et al. (1985), whereby the conditional proportions systematically underestimated the true hot hand effect of the data. Coin flips that resulted in heads were treated as made shots, while coin flips that resulted in tails were treated as missed shots. Applying the same logic to a basketball context, Miller and Sanjurjo reasoned that finite samples of shot data exhibited the same bias observed in the coin problem. More specifically, the expected proportion of made shots conditioned on a previous make was not equal to the player’s overall shooting percentage, but instead was biased downwards due to the structure of the sampling process. To fix this issue, Miller and Sanjurjo utilized a permutation test, descried in detail in Section 4.1. After accounting for the downward bias in conditional proportions with the permutation test, Miller and Sanjurjo discovered a reversal of Gilovich’s findings, indicating a discernible hot-hand effect for the given data.
+
+## Contextual Variation in Hot-Hand Evidence
+
+While much research has been conducted on hot-hand trends, the settings of each analysis provide little overlap and, therefore, are applied in different contexts. In addition to Gilovich’s analysis of 76ers players during the 1980-81 season, an analysis of conditional proportions under a controlled shooting experiment with the Cornell intercollegiate men’s and women’s basketball teams revealed that the outcomes of shot attempts were largely independent of the outcome of the previous attempt (Gilovich et al., 1985). The controlled experiment required players to shoot under highly regulated conditions, along with monetary incentivization determined by the accuracy of their shots. These results were ultimately subject to the same downward bias introduced by Miller and Sanjurjo. 
+
+Other analyses have yielded different results utilizing alternative methods and settings. An analysis of serial dependence on 110,513 free throws in the NBA revealed a discernible, albeit small, hot-hand effect in free throws (Mews & Ötting, 2023). This analysis accounted for unevenly spaced time points between free throws by using a state-space model that assesses a player’s form using the Ornstein-Uhlenbeck process. Data from the NBA Three-Point Contest also provide evidence of a hot-hand effect using the permutation testing procedure presented by Miller and Sanjurjo (Ross, 2017). The aforementioned analyses attempt to isolate the hot-hand effect by considering shots under controlled conditions to prevent additional covariates from influencing the results. While this approach yields strong results, they may not generalize to real game situations. 
+
+Additional research has offered unique perspectives on hot-hand trends by incorporating context into a player’s shots. An analysis of over 83,000 real game shots from the 2012-13 NBA season revealed that players shooting over their baseline shooting percentage in recent shots face different circumstances compared to when they are in their baseline state (Bocskocsky, Ezekowitz, & Stein, 2014). These circumstances include longer shot distances, facing tighter defense, increased likelihood of taking their team’s next shot, and overall attempting more difficult shots. The same study also determined that players in a “hot” state are more likely to make their next shot after controlling for shot difficulty.
+
+Basketball philosophy has also evolved substantially since Gilovich's analysis in 1985, when offensive play was largely characterized by interior scoring. As player skills have evolved, teams have increasingly emphasized perimeter play and distance shooting (Wang & Zheng, 2022). In addition, factors such as pace of play may further influence shooting patterns. Together, these changes in offensive strategy and shot selection suggest that conclusions drawn from earlier periods may not fully generalize to the context of modern basketball, potentially altering the interpretation of the hot-hand effect.
+
+Ultimately, the presence of the hot-hand phenomenon has largely remained unsolved due to differences in empirical research and statistical examinations of simulated data, which often rely on distinct assumptions and methodologies (Bar-Eli et al., 2006). Additionally, no clear definition of the hot hand exists, with studies varying in how they define and measure streak-shooting behavior. These discrepancies have contributed to ongoing debate regarding the validity of the effect.
+
+## Motivation
+
+Many hot-hand analyses have been conducted in controlled settings or within specific game contexts, such as the NBA Three-Point Contest (Ross, 2017; Lantis & Nesson, 2024) or free throw shooting (Arkes, 2010; Chang, 2019; Lantis & Nesson, 2021). Many of these foundational studies were also conducted in a different era of the NBA (Gilovich et al., 1985), when the style of play differed substantially from today’s game. These environments offer valuable insights in their respective contexts, but may differ in applicability to modern in-game playstyles. 
+
+The NBA has undergone notable changes in offensive philosophy from past eras, with a greater emphasis on perimeter shooting, increased pace of play, and the development of more versatile offensive skill sets. As a result, modern gameplay reflects a substantially different environment than previous eras. Therefore, reexamining the hot hand using modern, in-game data provides a new perspective on the presence and magnitude of streak shooting. Specifically, this study examines the hot-hand effect across players and seasons in the modern NBA, with the goal of evaluating streak-shooting tendencies over the past 10 seasons.
+
+# Data
+
+## Modern NBA Trends
+
+All data and figures presented in this section are derived from publicly available NBA statistics obtained from Basketball Reference (Sports Reference LLC. Basketball-Reference.com - Basketball Statistics and History. https://www.basketball-reference.com/. Accessed Oct 15, 2025). 
+
+The most notable example of the evolution of offensive strategy is Stephen Curry’s 2015-16 unanimous MVP season, in which he attempted a then-record 886 three-pointers. Figure __ below displays an increasing trend in the percentage of total field goal attempts (FGA) that were three-point attempts (3PA) after the 2015-16 regular season. The season variable is encoded as the ending year of each NBA season (e.g., 2016 corresponds to the 2015-16 season).
 
 ```{r}
-#| label: example-figure
-#| echo: false # Use to hide code but not results
-#| fig-cap: "Example Figure Title/Caption"
+#| include: false
 
-starwars |>
-  filter(!is.na(height), !is.na(mass), !is.na(species)) |>
-  filter(species %in% (starwars |> count(species, sort = TRUE) |> slice_head(n = 2) |> pull(species))) |>
-  ggplot(aes(x = height, y = mass, color = species)) +
-  geom_point() +
-  labs(
-    title = "Height v. Mass for most Common Starwars Species", 
-    x = "Height",
-    y = "Mass",
-    color = "Species") +
-  theme_bw()
+SeasonTotals <- read.csv(here::here("Data", "SeasonTotals.csv"))
 ```
+
+
+```{r}
+#| label: three-point-share-figure
+#| echo: false
+#| fig-cap: "Increasing trend in three-point share by season."
+#| message: false
+
+ggplot(SeasonTotals, aes(x = season_end, y = X3PA/FGA)) +
+  geom_point() +
+  geom_line(alpha = 0.4) +
+  geom_smooth(
+    method = "loess",
+    se = F,
+    linewidth = 1.2
+  ) + 
+  labs(
+    x = "Season",
+    y = "Percentage",
+    title = "Trend in Three-Point Attempt Rate by Season"
+  ) +
+  theme_minimal() +
+  scale_x_continuous(breaks = 2016:2025) +
+  scale_y_continuous(labels = function(x) sprintf("%.1f", x * 100))
+```
+
+The increase in three-point shooting raises the question of whether the hot-hand effect has evolved over time. Improvements in offensive skill could amplify streakiness, whereas the lower success rate of three-point attempts relative to two-point attempts may attenuate such effects. 
+
+Since the 2015-16 regular season, teams have also emphasized a faster pace of play to get more offensive possessions in a game. Pace, defined as the number of possessions a team uses in a standard 48-minute game, heavily influences the number of shots taken within a game and could have an impact on streak shooting. Figure __ below depicts a marked increase in the league-average pace from the 2015-16 to 2019-20 regular season, followed by a gradual decline and stabilization in recent seasons.
+
+```{r}
+#| include: false
+
+SeasonAvgs <- read.csv(here::here("Data", "SeasonAvgs.csv"))
+```
+
+```{r}
+#| label: pace-figure
+#| echo: false
+#| fig-cap: "League-average pace varies by season, experiencing rapid change after 2016."
+#| message: false
+
+ggplot(SeasonAvgs, aes(x = season_end, y = Pace)) +
+  geom_point() +
+  geom_line(alpha = 0.4) +
+  geom_smooth(
+    method = "loess",
+    se = F,
+    linewidth = 1.2
+  ) + 
+  labs(
+    x = "Season",
+    y = "Pace",
+    title = "League-Average Pace by Season"
+  ) +
+  theme_minimal() +
+  scale_x_continuous(breaks = 2016:2025) +
+  scale_y_continuous(labels = function(x) sprintf("%.1f", x))
+
+```
+
+The fluctuations in pace since 2016 may suggest changes in streak-shooting tendencies over time, as players attempt more shots per game and therefore have more opportunities to develop scoring streaks.
+
+Figure __ displays the league-average field goal attempts (FGA) per game at the team level increasing at a commensurate rate to the pace of play from approximately the 2015-16 to the 2019-20 regular season. Field goal attempts are defined as "any live-ball throw, shot, or tap---including layups and dunks---directed at a player's own basket to score, excluding free throws" (National Basketball Association, "Rule No. 4: Definitions," *official.nba.com*, accessed Oct 15, 2025).
+
+```{r}
+#| label: FGA-per-game-figure
+#| echo: false
+#| fig-cap: "League-average FGA per game at the team level increasing after 2016."
+#| message: false
+
+ggplot(SeasonAvgs, aes(x = season_end, y = FGA)) +
+  geom_point() +
+  geom_line(alpha = 0.4) +
+  geom_smooth(
+    method = "loess",
+    se = F,
+    linewidth = 1.2
+  ) + 
+  labs(
+    x = "Season",
+    y = "FGA per Game",
+    title = "League-Average Field Goal Attempts per Game by Season"
+  ) +
+  theme_minimal() +
+  scale_x_continuous(breaks = 2016:2025) +
+  scale_y_continuous(labels = function(x) sprintf("%.1f", x))
+```
+
+The increase in field goal attempts per game coincides with the increase of pace, suggesting a fundamental alteration in offensive philosophy that may influence streak-shooting tendencies.
+
+## Data Collection
+
+### Sample Selection
+
+Data on the top 50 players with the most field goal attempts per season were collected for each of 10 seasons from 2015-16 to 2024-25 (not including playoffs), yielding a total of 500 player-seasons. A player-season is defined as a single season of performance for an individual player (e.g. 2015-16 Stephen Curry, 2019-20 LeBron James). Restricting the sample to the top 50 shooters per season focuses the analysis on high-volume players, who account for a large share of their team’s shot attempts and are often among the most influential contributors. This approach reduces the overall sample size of the dataset while preserving a high number of shot attempts, allowing for higher statistical power in detecting a hot-hand effect. Importantly, some players were top 50 shooters in FGA in multiple seasons from 2015-16 to 2024-25. These players are represented multiple times in the analysis with unique shot sequences for each respective season in which they were a top 50 shooter. The 2015-16 season was chosen as the starting point due to its significance in changing league-wide trends in shot selection. It is of interest to analyze how the hot hand has progressed since that season, as more teams attempt to replicate the success of prolific offensive teams from that time frame.
+
+All data were collected using the R package hoopR (Gilani, 2023), which provides access to NBA play-by-play statistics through SportsDataverse API. Shot sequence data were obtained for the 500 player-seasons in consideration, with each sequence recording the sequential outcomes of all field goal attempts by a player within a player-season. For example, a shot sequence of ‘0011’, where 0’s represent missed shots and 1’s represent made shots, corresponds to a sequence in which a player missed the first two shots and made the last two shots. A missed shot was also defined as a “failure”, whereas a made shot was defined as a “success”. In total, data from 35,428 games across the 500 player-seasons was collected. 
+
+### Exploratory Data Analysis
+
+The distribution of the total number of field goal attempts per season for the top 50 shooters is displayed in Figure __ below. Notably, the 2019-20 and 2020-21 seasons exhibit lower overall field goal attempts relative to other seasons, which is likely attributable to COVID-19-related restrictions that reduced the number of games played. Prior to those seasons, the distributions of field goal attempts are bimodal, with the larger peaks occurring at approximately 1,000 field goal attempts and the smaller peaks under 1,500 field goal attempts. After the 2019-20 and 2020-21 seasons, the distributions become more unimodal, with peaks shifting to greater than 1,000 field goal attempts. This pattern could suggest a delayed impact of the 2015-16 season, when long-distance shooting and faster pace became the primary emphasis for most teams. In general, we see an increase in field goal attempts post-COVID, which could alter hot-hand trends.
+
+```{r}
+#| include: false
+
+all_players <- read.csv(here::here("Data", "all_players.csv"))
+
+all_players <- all_players |>
+  mutate(Season_label = str_c(20, sub(".*-", "", Season)))
+```
+
+
+```{r}
+#| label: FGA-per-game-ridge-figure
+#| echo: false
+#| fig-cap: "Distributions of FGA per game vary by season; shortened seasons in 2020 and 2021."
+#| message: false
+
+ggplot(all_players, aes(x = FGA, 
+                        y = Season_label, 
+                        fill = Season_label)) +
+  geom_density_ridges(scale = 1.2, alpha = 0.7, color = "black") +
+  labs(
+    title = "Distribution of Field Goal Attempts by Season",
+    x = "Field Goal Attempts (FGA)",
+    y = "Season"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  scale_fill_viridis_d()
+```
+
+For each shot sequence, multiple variables were collected or constructed to help analyze the hot-hand effect. We define an *opportunity* as a method of determining whether a player is currently on a hot streak. Specifically, an opportunity is any shot preceded by at least *k* consecutive made shots. In this analysis, *k* = 3 is used to remain consistent with prior hot-hand literature.
+
+For example, when *k* = 3, consider the sequence:
+
+\begin{center}
+0, 1, 1, 1, \underline{1}, \underline{0}, 1, 1, 1, \underline{1}
+\end{center}
+
+Shots that occur immediately after three consecutive made shots are classified as opportunity shots and are underlined in the example above. These opportunity shots are used to evaluate player performance while in a “hot” state.
+
+An initial analysis of the data reveals that the mean number of opportunities per game for qualified player-seasons has fluctuated across seasons, albeit at small increments, as shown in Table __ below. This trend does not necessarily imply any increase in hot-hand shooting ability, as the increase could stem from a variety of factors. As discussed earlier, league-wide average field goal attempts per game have also increased over time, which could lead to a higher number of observed opportunities simply due to a greater volume of shots being taken.
+
+```{r}
+#| include: false
+
+all_games_analysis <- read.csv(here::here("Data", "all_games_analysis.csv"))
+game_opportunities_all <- read.csv(here::here("Data", "game_opportunities_all.csv"))
+```
+
+```{r}
+#| include: false
+
+game_opportunities_all <- game_opportunities_all |>
+  inner_join(all_games_analysis,
+             by = c("athlete_id_1", "game_id"))
+
+season_summary_opportunities <- game_opportunities_all %>%
+  group_by(season_end.y) %>%
+  summarise(
+    mean_opps = mean(n_opportunities.x, na.rm = TRUE),
+    mean_opps_makes = mean(n_opportunity_makes.x, na.rm = TRUE),
+    mean_opps_percentage = sum(n_opportunity_makes.x, na.rm = TRUE) /
+                            sum(n_opportunities.x, na.rm = TRUE),
+    prop_opps = sum(n_opportunities.x, na.rm = TRUE) / 
+      sum(total_shots, na.rm = TRUE),
+      
+    .groups = "drop"
+  )
+```
+
+
+```{r}
+#| label: num-opportunities-table
+#| echo: false
+#| tbl-cap: "Number of Opportunities per Game per Player by Season"
+
+season_summary_opportunities |>
+  mutate(mean_opps = round(mean_opps, 2)) |>
+  select(season_end.y, mean_opps) |>
+  kable(col.names = c("Season", "Mean Opportunities"))
+```
+
+```{r}
+#| label: number-opportunities-per-total-shots-figure
+#| echo: false
+#| fig-cap: ""
+#| message: false
+
+ggplot(season_summary_opportunities, aes(x = season_end.y, y = prop_opps)) +
+  geom_point() +
+  geom_line(alpha = 0.4) +
+  geom_smooth(method = "loess", se = FALSE) +
+  scale_x_continuous(breaks = 2016:2025) +
+  labs(
+    x = "Season",
+    y = "Percentage",
+    title = "Percetnage of Total Shots that were Opportunity Shots"
+  ) +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 0.1))
+```
+
 
 ## How to Add Tables
 
