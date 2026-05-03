@@ -287,7 +287,7 @@ season_summary_opportunities |>
   kable(col.names = c("Season", "Mean Opportunities"))
 ```
 
-To adjust for the for the increase in the number of field goal attempts taken per game, the percentage of total field goal attempts that were opportunity shots was calculated and plotted in Figure __. The percentage of opportunity shots shows an overall upward trend across the period, but with noticeable year-to-year fluctuations. This increasing trend suggests a higher prevalence of streak occurrences over the past 10 seasons, which could be attributed to changes in offensive strategies or players becoming more capable of entering hot streaks. Importantly, this trend only describes a slight increase in the percentage of opportunity shots as opposed to an actual hot-hand effect.
+To adjust for the increase in the number of field goal attempts taken per game, the percentage of total field goal attempts that were opportunity shots was calculated and plotted in Figure __. The percentage of opportunity shots shows an overall upward trend across the period, but with noticeable year-to-year fluctuations. This increasing trend suggests a higher prevalence of streak occurrences over the past 10 seasons, which could be attributed to changes in offensive strategies or players becoming more capable of entering hot streaks. Importantly, this trend only describes a slight increase in the percentage of opportunity shots as opposed to an actual hot-hand effect.
 
 ```{r}
 #| label: number-opportunities-per-total-shots-figure
@@ -837,6 +837,269 @@ ggplot(df_all, aes(x = stat)) +
 ```
 
 After adjusting for the null mean (approximately -0.23), these values shift to around -0.25 and 0.25, producing the observed peaks. This pattern reflects the high variability of the statistic rather than systematic differences across seasons, providing little evidence of a meaningful season-specific hot-hand effect. 
+
+To examine the results further, the games were categorized by the number of opportunities in their respective sequence in Table ___. The table shows an overall negative relationship between the number of opportunities within a game and the number of games associated with the number of opportunities. This is expected because qualifying for opportunity shots is increasingly difficult as the number of opportunities increases. The *Proportion of Games with Adj_Diff* > 0 column represents the proportion of games in which the null-adjusted streak statistic was greater than 0, indicating a positive directional effect in favor of the hot hand.
+
+```{r}
+#| label: adj-diff-by-opps-table
+#| echo: false
+#| tbl-cap: "Proportion of Games with Bias-Adjusted Difference in Proportions Greater than 0."
+
+# calculating proportion of each 'n_opportunties' value in which adj_diff > 0
+opp_positive_prop <- all_games_analysis %>%
+  group_by(n_opportunities) %>%
+  #filter(
+    #n_opportunities > 0,      # exclude 0 opportunities
+  #  !is.na(adj_diff)          # ignore NA adj_diff values
+  #) %>%
+  summarise(
+    n_games = n(),                                 
+    prop_adj_diff_gt0 = round(mean(adj_diff > 0, na.rm = T), 3),        # proportion > 0
+    .groups = "drop"
+  ) %>%
+  add_row( # adding row with n_opportunities == 14 since there are no observations in data
+    n_opportunities = 14,
+    n_games = 0,
+    prop_adj_diff_gt0 = NA_real_
+  ) %>%
+  arrange(n_opportunities) %>%
+  mutate(
+    prop_adj_diff_gt0 =
+      ifelse(is.nan(prop_adj_diff_gt0) | !is.finite(prop_adj_diff_gt0),
+             NA_real_,
+             prop_adj_diff_gt0)
+  )
+
+  opp_positive_prop |>
+    kable(col.names = c("Number of Opportunities", "Number of Games", "Proportion of Games with Adj_Diff > 0"))
+```
+
+The proportion of games with adjusted differed in proportions is undefined for games with exactly 0 or 14 opportunities. Games with zero opportunities do not yield a streak statistic, and no games in the sample contain exactly 14 opportunities. Among games with at least one opportunity, those with only one opportunity comprise approximately (39.22%), representing the largest share across all opportunity counts. However, only about 4.3% of these games exhibit a positive null-adjusted difference in proportions, indicating minimal evidence of a hot-hand effect for single-opportunity games. 
+
+This result is consistent with the structural constraints of the shot sequence and qualifications of an opportunity shot. For a game to contain exactly one opportunity, the player must miss the opportunity shot. Otherwise, a made opportunity shot would generate an additional opportunity on the subsequent attempt. Consequently, the only scenario in which a positive adjusted streak statistic can occur in a one-opportunity game is when the lone opportunity arises at the end of the sequence, such as when the player makes the final four shots of the game with no prior opportunities. In this case, the final shot constitutes a successful opportunity while precluding the possibility of additional opportunities. Because this scenario occurs infrequently, the proportion of games with a positive adjusted streak statistic is correspondingly very low, as reflected by the 4.3% figure. 
+
+In games with more than one opportunity, the proportion of games exhibiting a positive adjusted streak statistic is substantially larger than in single-opportunity games, with all but the 13-opportunity category exceeding 50%. This pattern can be explained by the underlying structure of the data, as multiple opportunities within a game typically arise from prior successful opportunity shots, leading to higher opportunity field goal percentages and, consequently, larger adjusted streak statistics. For instance, consider a shot sequence with five opportunity shots. Due to the limited number of shots that a player can take within a game, it is very likely that the opportunity shots clump together, forming a string of successful opportunity shots. The shot sequences below illustrates this concept with five opportunity shots.
+
+(**ADD MORE TO THIS SECTION LATER**)
+(**SEE PAGE 32 & 33 IN SCRIPT**)
+
+\begin{center}
+0, 1, 1, 1, \underline{1}, \underline{0}, 1, 1, 1, \underline{1}, \underline{1}, \underline{0}
+\end{center}
+
+# Logistic Hierarchical Models
+
+While the permutations tests for both season-long and within-game sequences provide little evidence of a hot-hand effect, these analyses do not account for contextual factors that may influence shooting performance. Incorporating additional variables into our analysis allows for a reexamination of the hot-hand effect while accounting for specific in-game conditions.
+
+## Shot Distance Analysis
+
+Shot distances were analyzed to assess whether players exhibit different shooting distances on opportunity shots compared to non-opportunity shots. Summary statistics for quantitative shot distance by opportunity status are presented in Table ___, where “all” includes both opportunity and other shots.
+
+```{r}
+#| label: shot-distance-by-opps-table
+#| echo: false
+#| tbl-cap: "Average Shot Distance by Shot Type."
+
+shot_table <- data.frame(
+  `Shot Type` = c("All", "Opportunity", "Other (non-opportunity)"),
+  `Average Distance (Ft.)` = c(14.28, 16.03, 14.13)
+)
+
+kable(shot_table, digits = 2,
+      col.names = c("Shot Type", "Average Distance (Ft.)"))
+```
+
+As shown in Table ___, opportunity shots are taken from a greater average distance than other shots, suggesting increased difficulty in these situations. Figure __ displays the distribution of shot distances by shot type, with both curves exhibiting a similar bimodal shape corresponding to close-range and three-point attempts. However, while the peaks of the "other" shot distribution are of roughly equal height, the opportunity shot distribution features a more pronounced peak at longer distances compared to its peak at shorter distances. This shift indicates that opportunity shots are more likely to be taken from longer distances than other shots, reinforcing the pattern observed in Table __.
+
+```{r}
+#| label: shot-dist-density-figure
+#| echo: false
+#| fig-cap: "Shot Distances by Shot Type."
+#| message: false
+
+ggplot(shot_level_data,
+       aes(x = shot_dist,
+           fill = factor(is_opportunity,
+                         levels = c(0, 1),
+                         labels = c("Other", "Opportunity")))) +
+  geom_density(alpha = 0.4) +
+  labs(
+    title = "Shot Distance Distribution by Shot Type",
+    x = "Shot Distance (ft.)",
+    y = "Density",
+    fill = "Shot Type"
+  ) +
+  theme_minimal(base_size = 13) +
+  scale_x_continuous(limits = c(0, 50))
+```
+
+To further solidify the differences between opportunity and non-opportunity (other) shots, the average shot distance for each shot type was computed within each player-season to account for player-season variation. For each player-season, the difference between mean opportunity shot distance and mean non-opportunity shot distance was calculated. The mean of these differences was approximately 2.14 feet, indicating that, on average, opportunity shots were taken from a greater distance than other shots within the same player-season. 
+
+A paired t-test was conducted to assess whether the mean difference in shot distance was greater than zero. The results provide strong evidence that opportunity shots are taken from a greater distance than non-opportunity shots, *t*(499) = 30.94, *p* < 0.001. The estimated mean difference was 2.14 feet, with a one-sided 95% confidence interval indicating that the true mean difference is at least 2.03 feet.
+
+Figure ____ presents a scatterplot of average shot distance on opportunity shots versus average shot distance on non-opportunity shots for each player-season, grouped by position. Positions were categorized into guard, forward, and center based on classifications from Basketball Reference (Sports Reference LLC. Basketball-Reference.com - Basketball Statistics and History. https://www.basketball-reference.com/. Accessed Oct 15, 2025). The diagonal reference line represents equality in shot distance between the two shot types. The majority of points lie above this line, indicating that, for most player-seasons, opportunity shots are taken from greater distances than non-opportunity shots.
+
+```{r}
+#| include: false
+
+player_season_distance_new <- read.csv(here::here("Data", "player_season_distance_new.csv"))
+```
+
+
+```{r}
+#| label: shot-dist-scatter-figure
+#| echo: false
+#| fig-cap: "Average Shot Distances by Shot Type for Qualified Player-Seasons."
+#| message: false
+
+ggplot(player_season_distance_new,
+       aes(x = other_dist,
+           y = opp_dist,
+           color = forcats::fct_rev(factor(Pos_group)))) +
+
+ geom_point(alpha = .6) +
+
+ geom_abline(
+   slope = 1,
+   intercept = 0,
+   linetype = "dashed"
+ ) +
+
+ theme_minimal() +
+  #scale_color_viridis_d() +
+  labs(
+    x = "Other Distance (Ft.)",
+    y = "Opportunity Distance (Ft.)",
+    title = "Average Opportunity Distance vs. Non-Opportunity Distance by Position",
+    color = "Position"
+  )
+```
+
+Shot distance was also analyzed on a categorical scale to account for the large proportion of shots taken from grouped distances. The three levels of shot distance are close (0-8 feet), mid-range (8-22 feet), and three-pointer (22+ feet), as outlined in Section 3.2.2.
+
+```{r}
+#| label: shot-distance-by-opps-categorical-table
+#| echo: false
+#| tbl-cap: "Proportions of Distance Category by Shot Type."
+
+shot_level_data %>%
+  mutate(
+    shot_type = factor(is_opportunity,
+                       levels = c(1, 0),
+                       labels = c("Opportunity", "Other")),
+    
+    dist_category = factor(dist_category,
+                           levels = c("Close", "Midrange", "ThreePoint"),
+                           labels = c("Close", "Mid-range", "Three-Pointer"))
+  ) %>%
+  count(shot_type, dist_category) %>%
+  group_by(shot_type) %>%
+  mutate(prop = n / sum(n)) %>%
+  select(-n) %>%
+  tidyr::pivot_wider(
+    names_from = dist_category,
+    values_from = prop
+  ) %>%
+  kable(digits = 3,
+        col.names = c("Shot Type", "Close", "Mid-range", "Three-Pointer"))
+```
+
+Table __, along with Figure _, reveals that a larger proportion of opportunity shots were three-pointers compared to other shots, while a smaller proportion were close shots. The proportion of mid-range shots remained relatively similar between shot types. A chi-square test of independence confirmed that the distribution of distance categories is dependent on shot type $\chi^2(2)$ = 420.55, *p* < .001. 
+
+```{r}
+#| include: false
+
+tab <- table(
+  shot_level_data$is_opportunity,
+  shot_level_data$dist_category
+)
+
+chi_test <- chisq.test(tab)
+chi_test
+```
+
+```{r}
+#| include: false
+
+shot_level_data$shot_type <- factor(
+  shot_level_data$is_opportunity,
+  levels = c(1, 0),
+  labels = c("Opportunity", "Other")
+)
+
+shot_level_data$dist_category <- factor(
+  shot_level_data$dist_category,
+  levels = c("Close", "Midrange", "ThreePoint"),
+  labels = c("Close", "Mid-range", "Three-Pointer")
+)
+```
+
+```{r}
+#| label: dist-cat-by-opp-figure
+#| echo: false
+#| fig-cap: "Distance Category by Shot Type."
+#| message: false
+
+ggplot(shot_level_data,
+       aes(x = factor(is_opportunity,
+                      levels = c(1, 0),
+                      labels = c("Opportunity", "Non-opportunity")),
+           fill = dist_category)) +
+  geom_bar(position = "fill") +
+  labs(
+    title = "Shot Distance Composition by Shot Type",
+    x = "Shot Type",
+    y = "Percentage",
+    fill = "Distance Category"
+  ) +
+  scale_y_continuous(labels = scales::percent) +
+  theme_minimal(base_size = 13)
+```
+
+This phenomenon likely arises from a combination of psychological and strategic factors. Players may describe the sensation of being “on fire”, referring to a mental and physical state of heightened focus and elevated performance. This can lead to increased confidence and manifest in more aggressive shot selection, including attempts from greater distances. The general public commonly refers to this state as heat-check behavior, as players attempt to capitalize on their recent success. Other possible explanations involve strategic adjustments from both teams. Defenses may adjust by applying tighter coverage to a perceived “hot” player, forcing shots from further distances or worse positions. In turn, offenses may settle for longer-distance shots, as these are often quicker to attempt or more readily available under increased defensive pressure.
+
+Due to this phenomenon, a new model that includes shot distance as a variable would greatly improve the results of the analysis by further isolating the hot-hand effect. 
+
+## Model Specification
+
+A logistic hierarchical model was constructed to evaluate the probability of a successful shot based on specific in-game variables and random effects. The variables and random effects are outlined in Table __.
+
+$y_{ij} = \beta_0 + \beta_1{opportunity_{ij}} + \mu_{0j} + \mu_{1j}opportunity_{ij} + \epsilon_{ij}$
+
+```{r}
+#| label: hierarchical-model-variable-descriptions-table
+#| echo: false
+#| tbl-cap: "Hierarchical Model Variable Descriptions."
+
+var_table <- data.frame(
+  Variable = c("make", "intercept", "is_opportunity", "dist_category", "is_opportunity*dist_category",
+               "(1 &#124; player)", "(is_opportunity | player)",
+               "(1 | player)"),
+  Description = c(
+    "Baseline shot distance",
+    "Indicator for whether a shot was made (1 = make, 0 = miss)",
+    "Indicator for opportunity shot (1 = yes, 0 = no)",
+    "Categorical shot distance (Close, Mid-range, Three-Pointer)",
+    "Interaction between is_opportunity and dist_category",
+    "Player-specific intercept",
+    "Player-specific opportunity effect",
+    "Season-specific intercept"
+  ),
+  `Effect Type` = c("Response", 
+                    "Fixed", 
+                    "Fixed",
+                    "Fixed",
+                    "Fixed",
+                    "Random intercept",
+                    "Random slope",
+                    "Random intercept")
+)
+
+kable(var_table, booktabs = TRUE, 
+      col.names = c("Variable", "Description", "Effect Type"),
+      escape = F) %>%
+  kable_styling(latex_options = c("hold_position"))
+```
 
 
 
