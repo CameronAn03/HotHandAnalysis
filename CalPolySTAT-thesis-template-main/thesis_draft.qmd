@@ -16,11 +16,10 @@ format:
       - frontmatter/copyright-page.tex
       - frontmatter/committee-page.tex
       - frontmatter/abstract.tex
-      - frontmatter/acknowledgments.tex
       - frontmatter/table-of-contents.tex
     number-sections: true
     citation-style: apa
-    bibliography: bibliography/example-bibliography.bib
+    bibliography: bibliography/bibliography.bib
     csl: bibliography/apa-6th-edition.csl
     include-in-header: frontmatter/formating.tex
 ---
@@ -54,10 +53,7 @@ library(brms)
 
 # Introduction
 
-There will probably be lots of citations here for many articles or even software like R [@r_core_team_r_2024].
-
-The concept of the hot hand in basketball has been fiercely debated among audiences spanning many decades. Fans and players often describe the phenomenon as reaching an elevated state of play following a streak of recent success. One general notion of hot-hand shooting posits that players tend to make a higher percentage of shots relative to their baseline shooting ability following a recent streak of made shots. Proponents of the hot hand argue that the physical and psychological benefits of witnessing a streak of success place players “in rhythm”, a state of increased confidence and ability that may increase the chances of making a shot. Former Golden State Warriors player Purvis Short described the experience of being “hot” as follows: “You’re in a world all your own. It’s hard to describe. But the basket seems to be so wide. No matter what you do, you know the ball is going in” (Short, as quoted in Tversky & Gilovich, 1a 989). However, opponents argue that these experiences may reflect cognitive biases, suggesting that apparent streaks may arise purely from random variation. These perspectives highlight the intuitive appeal of the hot-hand phenomenon, raising the question of whether perceived streaks in performance reflect underlying changes in ability under unique circumstances or simply arise from chance.
-
+The concept of the hot hand in basketball has been fiercely debated among audiences spanning many decades. Fans and players often describe the phenomenon as reaching an elevated state of play following a streak of recent success. One general notion of hot-hand shooting posits that players tend to make a higher percentage of shots relative to their baseline shooting ability following a recent streak of made shots. Proponents of the hot hand argue that the physical and psychological benefits of witnessing a streak of success place players “in rhythm”, a state of increased confidence and ability that may increase the chances of making a shot. Former Golden State Warriors player Purvis Short described the experience of being “hot” as follows: “You’re in a world all your own. It’s hard to describe. But the basket seems to be so wide. No matter what you do, you know the ball is going in” [@tversky_cold_1989]. However, opponents argue that these experiences may reflect cognitive biases, suggesting that apparent streaks may arise purely from random variation. These perspectives highlight the intuitive appeal of the hot-hand phenomenon, raising the question of whether perceived streaks in performance reflect underlying changes in ability under unique circumstances or simply arise from chance.
 
 # Background
 
@@ -65,27 +61,27 @@ The concept of the hot hand in basketball has been fiercely debated among audien
 
 Statistical research has questioned whether the hot hand truly exists, despite widespread belief from fans, players, and the general public. In a seminal study, Gilovich, Vallone, and Tversky (1985), examined streak-shooting tendencies to determine if observed streaks exceeded those expected under randomness. The sample data consisted of field goal attempts from 48 home games of 76ers players and their opponents during the 1980-81 season. The first section of their analysis used conditional proportions to examine players’ shooting percentages conditional on the outcome of previous shots. For each of nine players on the 76ers, Gilovich, Vallone, and Tversky computed the overall shooting proportion as well as conditional shooting proportions based on whether the previous one, two, or three shots were successful. They also estimated the serial correlation between the outcomes of successive shots to determine if there existed any dependence structure within a player’s shot sequence. A “success”, or “hit”, was defined as a made shot. The authors discovered that only one out of the nine sampled players possessed a higher success rate on shots following a make compared to their overall success rate. Furthermore, eight out of nine players exhibited a negative serial correlation value, none of which being significantly different from zero. 
 
-The findings in this paper contributed to the characterization of the hot hand as a myth, which researchers attribute to a cognitive fallacy whereby individuals misinterpret random streaks as performance trends (Gilovich et al., 1985). A potential explanation for such a phenomenon involves memory bias, the idea that observers are likely to overestimate the dependence of sequential shots due to long sequences of successes (or failures) being more memorable than alternating successes and failures (Gilovich et al., 1985). Other studies have since expanded upon the analysis in Gilovich et al., (1985), yielding similar results of a lack of hot-hand effect (Koehler & Conley, 2003; McNair et al., 2020; Lantis & Nesson, 2021).
+The findings in this paper contributed to the characterization of the hot hand as a myth, which researchers attribute to a cognitive fallacy whereby individuals misinterpret random streaks as performance trends [@gilovich_hot_1985]. A potential explanation for such a phenomenon involves memory bias, the idea that observers are likely to overestimate the dependence of sequential shots due to long sequences of successes (or failures) being more memorable than alternating successes and failures [@gilovich_hot_1985]. Other studies have since expanded upon the analysis of Gilovich, Vallone, and Tversky, yielding similar results of a lack of hot-hand effect [@koehler_hot_2003; @mcnair_hot_2020; @lantis_hot_2021].
 
-However, recent research has revisited the validity of the methods used in Gilovich et al. (1985). In particular, Miller and Sanjurjo (2018) identified a flaw in the conditional proportion analysis used in the 1985 paper. The flaw stems from a systematic bias in the analysis of conditional shooting percentages within finite shot sequences, which ultimately resulted in an underestimation of the true hot hand effect. Miller & Sanjurjo (2018) formally demonstrated the downward bias in conditional proportion estimators by analyzing all possible permutations of short finite sequences of independent binary outcomes. In their example using three consecutive coin flips, they examine the proportion of heads following a previous head under the assumption of independence. A calculation of the conditional proportion estimator revealed that the expected proportion of heads conditioned on a previous head is equal to $\frac{5}{12}$, notably lower than the suspected 0.5, illustrating the systematic downward bias introduced by conditioning on finite sequences (Miller & Sanjurjo, 2018).
+However, recent research has revisited the validity of the methods used in Gilovich, Vallone, and Tversky (1985). In particular, Miller and Sanjurjo (2018) identified a flaw in the conditional proportion analysis used in the 1985 paper. The flaw stems from a systematic bias in the analysis of conditional shooting percentages within finite shot sequences, which ultimately resulted in an underestimation of the true hot hand effect. Miller & Sanjurjo (2018) formally demonstrated the downward bias in conditional proportion estimators by analyzing all possible permutations of short finite sequences of independent binary outcomes. In their example using three consecutive coin flips, they examine the proportion of heads following a previous head under the assumption of independence. A calculation of the conditional proportion estimator revealed that the expected proportion of heads conditioned on a previous head is equal to $\frac{5}{12}$, notably lower than the suspected 0.5, illustrating the systematic downward bias introduced by conditioning on finite sequences [@miller_surprised_2018].
 
-Miller and Sanjurjo applied the coin-flipping framework to demonstrate bias in the methodology of Gilovich et al. (1985), whereby the conditional proportions systematically underestimated the true hot hand effect of the data. Coin flips that resulted in heads were treated as made shots, while coin flips that resulted in tails were treated as missed shots. Applying the same logic to a basketball context, Miller and Sanjurjo reasoned that finite samples of shot data exhibited the same bias observed in the coin problem. More specifically, the expected proportion of made shots conditioned on a previous make was not equal to the player’s overall shooting percentage, but instead was biased downwards due to the structure of the sampling process. To fix this issue, Miller and Sanjurjo utilized a permutation test, descried in detail in Section 4.1. After accounting for the downward bias in conditional proportions with the permutation test, Miller and Sanjurjo discovered a reversal of Gilovich’s findings, indicating a discernible hot-hand effect for the given data.
+Miller and Sanjurjo applied the coin-flipping framework to demonstrate bias in the methodology of Gilovich, Vallone, and Tversky (1985), whereby the conditional proportions systematically underestimated the true hot hand effect of the data. Coin flips that resulted in heads were treated as made shots, while coin flips that resulted in tails were treated as missed shots. Applying the same logic to a basketball context, Miller and Sanjurjo reasoned that finite samples of shot data exhibited the same bias observed in the coin problem. More specifically, the expected proportion of made shots conditioned on a previous make was not equal to the player’s overall shooting percentage, but instead was biased downwards due to the structure of the sampling process. To fix this issue, Miller and Sanjurjo utilized a permutation test, descried in detail in Section 4.1. After accounting for the downward bias in conditional proportions with the permutation test, Miller and Sanjurjo discovered a reversal of Gilovich’s findings, indicating a discernible hot-hand effect for the given data.
 
 ## Contextual Variation in Hot-Hand Evidence
 
-While much research has been conducted on hot-hand trends, the settings of each analysis provide little overlap and, therefore, are applied in different contexts. In addition to Gilovich’s analysis of 76ers players during the 1980-81 season, an analysis of conditional proportions under a controlled shooting experiment with the Cornell intercollegiate men’s and women’s basketball teams revealed that the outcomes of shot attempts were largely independent of the outcome of the previous attempt (Gilovich et al., 1985). The controlled experiment required players to shoot under highly regulated conditions, along with monetary incentivization determined by the accuracy of their shots. These results were ultimately subject to the same downward bias introduced by Miller and Sanjurjo. 
+While much research has been conducted on hot-hand trends, the settings of each analysis provide little overlap and, therefore, are applied in different contexts. In addition to Gilovich’s analysis of 76ers players during the 1980-81 season, an analysis of conditional proportions under a controlled shooting experiment with the Cornell intercollegiate men’s and women’s basketball teams revealed that the outcomes of shot attempts were largely independent of the outcome of the previous attempt [@gilovich_hot_1985]. The controlled experiment required players to shoot under highly regulated conditions, along with monetary incentivization determined by the accuracy of their shots. These results were ultimately subject to the same downward bias introduced by Miller and Sanjurjo. 
 
-Other analyses have yielded different results utilizing alternative methods and settings. An analysis of serial dependence on 110,513 free throws in the NBA revealed a discernible, albeit small, hot-hand effect in free throws (Mews & Ötting, 2023). This analysis accounted for unevenly spaced time points between free throws by using a state-space model that assesses a player’s form using the Ornstein-Uhlenbeck process. Data from the NBA Three-Point Contest also provide evidence of a hot-hand effect using the permutation testing procedure presented by Miller and Sanjurjo (Ross, 2017). The aforementioned analyses attempt to isolate the hot-hand effect by considering shots under controlled conditions to prevent additional covariates from influencing the results. While this approach yields strong results, they may not generalize to real game situations. 
+Other analyses have yielded different results utilizing alternative methods and settings. An analysis of serial dependence on 110,513 free throws in the NBA revealed a discernible, albeit small, hot-hand effect in free throws [@mews_continuous-time_2023]. This analysis accounted for unevenly spaced time points between free throws by using a state-space model that assesses a player’s form using the Ornstein-Uhlenbeck process. Data from the NBA Three-Point Contest also provide evidence of a hot-hand effect using the permutation testing procedure presented by Miller and Sanjurjo [@ross_classroom_2017]. The aforementioned analyses attempt to isolate the hot-hand effect by considering shots under controlled conditions to prevent additional covariates from influencing the results. While this approach yields strong results, they may not generalize to real game situations. 
 
-Additional research has offered unique perspectives on hot-hand trends by incorporating context into a player’s shots. An analysis of over 83,000 real game shots from the 2012-13 NBA season revealed that players shooting over their baseline shooting percentage in recent shots face different circumstances compared to when they are in their baseline state (Bocskocsky, Ezekowitz, & Stein, 2014). These circumstances include longer shot distances, facing tighter defense, increased likelihood of taking their team’s next shot, and overall attempting more difficult shots. The same study also determined that players in a “hot” state are more likely to make their next shot after controlling for shot difficulty.
+Additional research has offered unique perspectives on hot-hand trends by incorporating context into a player’s shots. An analysis of over 83,000 real game shots from the 2012-13 NBA season revealed that players shooting over their baseline shooting percentage in recent shots face different circumstances compared to when they are in their baseline state [@bocskocsky_heat_2014]. These circumstances include longer shot distances, facing tighter defense, increased likelihood of taking their team’s next shot, and overall attempting more difficult shots. The same study also determined that players in a “hot” state are more likely to make their next shot after controlling for shot difficulty.
 
-Basketball philosophy has also evolved substantially since Gilovich's analysis in 1985, when offensive play was largely characterized by interior scoring. As player skills have evolved, teams have increasingly emphasized perimeter play and distance shooting (Wang & Zheng, 2022). In addition, factors such as pace of play may further influence shooting patterns. Together, these changes in offensive strategy and shot selection suggest that conclusions drawn from earlier periods may not fully generalize to the context of modern basketball, potentially altering the interpretation of the hot-hand effect.
+Basketball philosophy has also evolved substantially since Gilovich's analysis in 1985, when offensive play was largely characterized by interior scoring. As player skills have evolved, teams have increasingly emphasized perimeter play and distance shooting [@wang_what_2022]. In addition, factors such as pace of play may further influence shooting patterns. Together, these changes in offensive strategy and shot selection suggest that conclusions drawn from earlier periods may not fully generalize to the context of modern basketball, potentially altering the interpretation of the hot-hand effect.
 
-Ultimately, the presence of the hot-hand phenomenon has largely remained unsolved due to differences in empirical research and statistical examinations of simulated data, which often rely on distinct assumptions and methodologies (Bar-Eli et al., 2006). Additionally, no clear definition of the hot hand exists, with studies varying in how they define and measure streak-shooting behavior. These discrepancies have contributed to ongoing debate regarding the validity of the effect.
+Ultimately, the presence of the hot-hand phenomenon has largely remained unsolved due to differences in empirical research and statistical examinations of simulated data, which often rely on distinct assumptions and methodologies [@bar-eli_twenty_2006]. Additionally, no clear definition of the hot hand exists, with studies varying in how they define and measure streak-shooting behavior. These discrepancies have contributed to ongoing debate regarding the validity of the effect.
 
 ## Motivation
 
-Many hot-hand analyses have been conducted in controlled settings or within specific game contexts, such as the NBA Three-Point Contest (Ross, 2017; Lantis & Nesson, 2024) or free throw shooting (Arkes, 2010; Chang, 2019; Lantis & Nesson, 2021). Many of these foundational studies were also conducted in a different era of the NBA (Gilovich et al., 1985), when the style of play differed substantially from today’s game. These environments offer valuable insights in their respective contexts, but may differ in applicability to modern in-game playstyles. 
+Many hot-hand analyses have been conducted in controlled settings or within specific game contexts, such as the NBA Three-Point Contest [@ross_classroom_2017; @lantis_hot_2024] or free throw shooting [@arkes_revisiting_2010; @chang_predictive_2019; @lantis_hot_2021]. Many of these foundational studies were also conducted in a different era of the NBA than in Gilovich, Vallone, and Tversky (1985), when the style of play differed substantially from today’s game. These environments offer valuable insights in their respective contexts, but may differ in applicability to modern in-game playstyles. 
 
 The NBA has undergone notable changes in offensive philosophy from past eras, with a greater emphasis on perimeter shooting, increased pace of play, and the development of more versatile offensive skill sets. As a result, modern gameplay reflects a substantially different environment than previous eras. Therefore, reexamining the hot hand using modern, in-game data provides a new perspective on the presence and magnitude of streak shooting. Specifically, this study examines the hot-hand effect across players and seasons in the modern NBA, with the goal of evaluating streak-shooting tendencies over the past 10 seasons.
 
@@ -93,7 +89,7 @@ The NBA has undergone notable changes in offensive philosophy from past eras, wi
 
 ## Modern NBA Trends
 
-All data and figures presented in this section are derived from publicly available NBA statistics obtained from Basketball Reference (Sports Reference LLC. Basketball-Reference.com - Basketball Statistics and History. https://www.basketball-reference.com/. Accessed Oct 15, 2025). 
+All data and figures presented in this section are derived from publicly available NBA statistics obtained from Basketball Reference [@noauthor_nba_nodate]. 
 
 The most notable example of the evolution of offensive strategy is Stephen Curry’s 2015-16 unanimous MVP season, in which he attempted a then-record 886 three-pointers. Figure __ below displays an increasing trend in the percentage of total field goal attempts (FGA) that were three-point attempts (3PA) after the 2015-16 regular season. The season variable is encoded as the ending year of each NBA season (e.g., 2016 corresponds to the 2015-16 season).
 
@@ -165,7 +161,7 @@ ggplot(SeasonAvgs, aes(x = season_end, y = Pace)) +
 
 The fluctuations in pace since 2016 may suggest changes in streak-shooting tendencies over time, as players attempt more shots per game and therefore have more opportunities to develop scoring streaks.
 
-Figure __ displays the league-average field goal attempts (FGA) per game at the team level increasing at a commensurate rate to the pace of play from approximately the 2015-16 to the 2019-20 regular season. Field goal attempts are defined as "any live-ball throw, shot, or tap---including layups and dunks---directed at a player's own basket to score, excluding free throws" (National Basketball Association, "Rule No. 4: Definitions," *official.nba.com*, accessed Oct 15, 2025).
+Figure __ displays the league-average field goal attempts (FGA) per game at the team level increasing at a commensurate rate to the pace of play from approximately the 2015-16 to the 2019-20 regular season. Field goal attempts are defined as "any live-ball throw, shot, or tap---including layups and dunks---directed at a player's own basket to score, excluding free throws" [@noauthor_rule_nodate].
 
 ```{r}
 #| label: FGA-per-game-figure
@@ -199,7 +195,7 @@ The increase in field goal attempts per game coincides with the increase of pace
 
 Data on the top 50 players with the most field goal attempts per season were collected for each of 10 seasons from 2015-16 to 2024-25 (not including playoffs), yielding a total of 500 player-seasons. A player-season is defined as a single season of performance for an individual player (e.g. 2015-16 Stephen Curry, 2019-20 LeBron James). Restricting the sample to the top 50 shooters per season focuses the analysis on high-volume players, who account for a large share of their team’s shot attempts and are often among the most influential contributors. This approach reduces the overall sample size of the dataset while preserving a high number of shot attempts, allowing for higher statistical power in detecting a hot-hand effect. Importantly, some players were top 50 shooters in FGA in multiple seasons from 2015-16 to 2024-25. These players are represented multiple times in the analysis with unique shot sequences for each respective season in which they were a top 50 shooter. The 2015-16 season was chosen as the starting point due to its significance in changing league-wide trends in shot selection. It is of interest to analyze how the hot hand has progressed since that season, as more teams attempt to replicate the success of prolific offensive teams from that time frame.
 
-All data were collected using the R package hoopR (Gilani, 2023), which provides access to NBA play-by-play statistics through SportsDataverse API. Shot sequence data were obtained for the 500 player-seasons in consideration, with each sequence recording the sequential outcomes of all field goal attempts by a player within a player-season. For example, a shot sequence of ‘0011’, where 0’s represent missed shots and 1’s represent made shots, corresponds to a sequence in which a player missed the first two shots and made the last two shots. A missed shot was also defined as a “failure”, whereas a made shot was defined as a “success”. In total, data from 35,428 games across the 500 player-seasons was collected. 
+All data were collected using the R package hoopR [@noauthor_hoopr_nodate], which provides access to NBA play-by-play statistics through SportsDataverse API. Shot sequence data were obtained for the 500 player-seasons in consideration, with each sequence recording the sequential outcomes of all field goal attempts by a player within a player-season. For example, a shot sequence of ‘0011’, where 0’s represent missed shots and 1’s represent made shots, corresponds to a sequence in which a player missed the first two shots and made the last two shots. A missed shot was also defined as a “failure”, whereas a made shot was defined as a “success”. In total, data from 35,428 games across the 500 player-seasons was collected. 
 
 ### Exploratory Data Analysis
 
@@ -496,7 +492,7 @@ The QQ Plot (Figure ___) above compares the observed p-values from the permutati
 
 To account for the false discovery rate of hot-hand effects, the Benjamini-Hochberg procedure was applied to the existing p-values. After this adjustment, none of the player-seasons remain statistically significant, providing no evidence of a hot-hand effect after correcting for multiple comparisons.  
 
-## Game-level Data
+### Game-level Data
 
 Season-long shot sequences were then deconstructed further into game-level sequences. In this sample, each observation corresponds to a binary sequence of makes and misses for a game within a player-season. Thus, each player-season contributes multiple sequences, one for each game in which the player recorded field goal attempts. The permutation test is applied to each game-level shot sequence separately, capturing within-game streak behavior and allowing for a more granular analysis of hot-hand shooting patterns. Results for game-level data are often considered more practical for hot-hand analysis than season-long data since most people attribute the hot-hand effect to individual games rather than prolonged periods of time. However, using game-level data decreases the statistical power of the permutation test considerably, as shot sequences typically contain very few opportunities, if any.
 
@@ -916,6 +912,7 @@ As shown in Table ___, opportunity shots are taken from a greater average distan
 #| echo: false
 #| fig-cap: "Shot Distances by Shot Type."
 #| message: false
+#| warning: false
 
 ggplot(shot_level_data,
        aes(x = shot_dist,
@@ -1062,9 +1059,15 @@ Due to this phenomenon, a new model that includes shot distance as a variable wo
 
 ## Model Specification
 
-A logistic hierarchical model was constructed to evaluate the probability of a successful shot based on specific in-game variables and random effects. The variables and random effects are outlined in Table __.
+A logistic hierarchical model was constructed to evaluate the probability of a successful shot based on specific in-game variables and random effects. The equation incorporates specific levels are .... The variables and random effects are outlined in Table __.
 
-$y_{ij} = \beta_0 + \beta_1{opportunity_{ij}} + \mu_{0j} + \mu_{1j}opportunity_{ij} + \epsilon_{ij}$
+$logit(y_{ijk}) = \beta_0 + \beta_1{opportunity_{ij}} + \mu_{0j} + \mu_{1j}opportunity_{ij} + \epsilon_{ij}$
+\begin{align*}
+u_{0j} &\sim \mathcal{N}(0, \sigma^2_{u0}) \\
+u_{1j} &\sim \mathcal{N}(0, \sigma^2_{u1}) \\
+\epsilon_{ij} &\sim \mathcal{N}(0, \sigma^2)
+\end{align*}
+
 
 ```{r}
 #| label: hierarchical-model-variable-descriptions-table
@@ -1073,7 +1076,7 @@ $y_{ij} = \beta_0 + \beta_1{opportunity_{ij}} + \mu_{0j} + \mu_{1j}opportunity_{
 
 var_table <- data.frame(
   Variable = c("make", "intercept", "is_opportunity", "dist_category", "is_opportunity*dist_category",
-               "(1 &#124; player)", "(is_opportunity | player)",
+               "(1 | player)", "(is_opportunity | player)",
                "(1 | player)"),
   Description = c(
     "Baseline shot distance",
@@ -1101,15 +1104,42 @@ kable(var_table, booktabs = TRUE,
   kable_styling(latex_options = c("hold_position"))
 ```
 
+Hot-hand theory posits that the probability of a successful shot increases on opportunity shots compared to non-opportunity shots, resulting in a positive coefficient for the opportunity variable. The inclusion of this variable allows us to assess how the probability of a successful shot varies with opportunity status while simultaneously accounting for other factors.
+
+Player and season random effects were also included in the hierarchical model to account for unexplained heterogeneity in shooting performance and opportunity effects. In particular, the model includes random slopes for the opportunity effect across different players rather than assuming a uniform effect. Allowing different slopes for opportunity effects allows us to see which players are most impacted, or potentially not impacted, by hot-hand opportunities. Season random intercepts were also included to account for differences in baseline shooting ability across seasons.
+
+## Coefficient Bias
+
+The opportunity coefficient is prone to the small-sample bias present in permutation testing. Therefore, the coefficient becomes inflated and overestimates the true effect of an opportunity shot on success probability. To account for this, a simulation was run 
+
+## Results
+
+```{r}
+#| label: hierarchical-model-coefficients-table
+#| echo: false
+#| tbl-cap: "Hierarchical Model Coefficients."
+
+
+```
 
 
 # Conclusion
 
-Write something here I guess.
+## Limitations
+
+Importantly, the results obtained from the permutation test are specific to the sample of players considered, which primarily consist of high-usage players who attempt a large number of shots for their respective teams. As such, these findings do not generalize to low-usage players, whose shot selection and opportunities may differ substantially. Additionally, the permutation testing framework does not account for contextual factors that may influence the perception or existence of a streak.
+
+Within-game shot sequences also present a challenge for detecting hot-hand patterns due to limited sample sizes. The average number of shots per game for players in the sample was approximately 16, resulting in relatively few opportunity shots and, consequently, low statistical power. Considering season-long shot sequences increases the power of detecting a hot-hand by increasing sample sizes and increasing the number of opportunities. However, the results lose practical interpretability, as the hot-hand effect is generally understood to occur within games rather than across extended periods.
+
+Additional limitations arise from modeling assumptions and measurement choices. The hierarchical model assumes independence between shots, which is partially addressed through the inclusion of the opportunity variable. However, the opportunity variables does not fully capture within-game dynamics that may induce dependence of shots. Furthermore, defining an opportunity as three consecutive made shots serves only as a proxy for a “hot” state and may not fully reflect the underlying hot-hand effect. 
+
+## Future Work
+
+Additional analyses can be implemented to address the limitations presented above. Using a larger sample of players would allow for greater generalization to the NBA as a whole rather than only high-volume players. Incorporating additional variables, such as time between shots, defensive pressure, and game situation would help to further isolate the hot-hand effect and distinguish it from general shot streakiness. The permutation test and hierarchical model in this analysis employed a streak length of 3, which limits the frequency of opportunities. Shortening the streak length (e.g., $k$ = 1) would increase the number of opportunities within a shot sequence and, therefore, statistical power, but could weaken the contextual interpretation of an opportunity as representing a genuinely “hot” state. Future research could also extend this analysis to incorporate temporal dependence and a deeper examination of what constitutes a “hot” state. 
 
 ## Computational Details
 
-The results in this paper were obtained using `R` 4.4.1. `R` itself and all 
+The results in this paper were obtained using `R` 4.5.3. `R` itself and all 
 packages used are available from the Comprehensive `R` Archive Network (CRAN) at 
 https://CRAN.R-project.org/.
 
@@ -1128,19 +1158,3 @@ https://CRAN.R-project.org/.
 \let\clearpage\relax
 \let\cleardoublepage\relax
 
-# Super Cool Fancy Function
-
-<!-- Restore original formatting -->
-\let\clearpage\oldclearpage
-\let\cleardoublepage\oldcleardoublepage
-
-```{r}
-# Add your fancy function here!
-```
-
-# Slightly Less Cool Fancy Something
-
-```{r}
-# Got more fancy functions, or figures, or tables, 
-# or pretty much anything?
-```
