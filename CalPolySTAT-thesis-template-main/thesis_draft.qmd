@@ -91,7 +91,7 @@ The NBA has undergone notable changes in offensive philosophy from past eras, wi
 
 All data and figures presented in this section are derived from publicly available NBA statistics obtained from Basketball Reference [@noauthor_nba_nodate]. 
 
-The most notable example of the evolution of offensive strategy is Stephen Curry’s 2015-16 unanimous MVP season, in which he attempted a then-record 886 three-pointers. Figure __ below displays an increasing trend in the percentage of total field goal attempts (FGA) that were three-point attempts (3PA) after the 2015-16 regular season. The season variable is encoded as the ending year of each NBA season (e.g., 2016 corresponds to the 2015-16 season).
+The most notable example of the evolution of offensive strategy is Stephen Curry’s 2015-16 unanimous MVP season, in which he attempted a then-record 886 three-pointers. Figure 3.1 below displays an increasing trend in the percentage of total field goal attempts (FGA) that were three-point attempts (3PA) after the 2015-16 regular season. The season variable is encoded as the ending year of each NBA season (e.g., 2016 corresponds to the 2015-16 season).
 
 ```{r}
 #| include: false
@@ -126,7 +126,7 @@ ggplot(SeasonTotals, aes(x = season_end, y = X3PA/FGA)) +
 
 The increase in three-point shooting raises the question of whether the hot-hand effect has evolved over time. Improvements in offensive skill could amplify streakiness, whereas the lower success rate of three-point attempts relative to two-point attempts may attenuate such effects. 
 
-Since the 2015-16 regular season, teams have also emphasized a faster pace of play to get more offensive possessions in a game. Pace, defined as the number of possessions a team uses in a standard 48-minute game, heavily influences the number of shots taken within a game and could have an impact on streak shooting. Figure __ below depicts a marked increase in the league-average pace from the 2015-16 to 2019-20 regular season, followed by a gradual decline and stabilization in recent seasons.
+Since the 2015-16 regular season, teams have also emphasized a faster pace of play to get more offensive possessions in a game. Pace, defined as the number of possessions a team uses in a standard 48-minute game, heavily influences the number of shots taken within a game and could have an impact on streak shooting. Figure 3.2 below depicts a marked increase in the league-average pace from the 2015-16 to 2019-20 regular season, followed by a gradual decline and stabilization in recent seasons.
 
 ```{r}
 #| include: false
@@ -161,7 +161,7 @@ ggplot(SeasonAvgs, aes(x = season_end, y = Pace)) +
 
 The fluctuations in pace since 2016 may suggest changes in streak-shooting tendencies over time, as players attempt more shots per game and therefore have more opportunities to develop scoring streaks.
 
-Figure __ displays the league-average field goal attempts (FGA) per game at the team level increasing at a commensurate rate to the pace of play from approximately the 2015-16 to the 2019-20 regular season. Field goal attempts are defined as "any live-ball throw, shot, or tap---including layups and dunks---directed at a player's own basket to score, excluding free throws" [@noauthor_rule_nodate].
+Figure 3.3 displays the league-average field goal attempts (FGA) per game at the team level increasing at a commensurate rate to the pace of play from approximately the 2015-16 to the 2019-20 regular season. Field goal attempts are defined as "any live-ball throw, shot, or tap---including layups and dunks---directed at a player's own basket to score, excluding free throws" [@noauthor_rule_nodate].
 
 ```{r}
 #| label: FGA-per-game-figure
@@ -195,11 +195,11 @@ The increase in field goal attempts per game coincides with the increase of pace
 
 Data on the top 50 players with the most field goal attempts per season were collected for each of 10 seasons from 2015-16 to 2024-25 (not including playoffs), yielding a total of 500 player-seasons. A player-season is defined as a single season of performance for an individual player (e.g. 2015-16 Stephen Curry, 2019-20 LeBron James). Restricting the sample to the top 50 shooters per season focuses the analysis on high-volume players, who account for a large share of their team’s shot attempts and are often among the most influential contributors. This approach reduces the overall sample size of the dataset while preserving a high number of shot attempts, allowing for higher statistical power in detecting a hot-hand effect. Importantly, some players were top 50 shooters in FGA in multiple seasons from 2015-16 to 2024-25. These players are represented multiple times in the analysis with unique shot sequences for each respective season in which they were a top 50 shooter. The 2015-16 season was chosen as the starting point due to its significance in changing league-wide trends in shot selection. It is of interest to analyze how the hot hand has progressed since that season, as more teams attempt to replicate the success of prolific offensive teams from that time frame.
 
-All data were collected using the R package hoopR [@noauthor_hoopr_nodate], which provides access to NBA play-by-play statistics through SportsDataverse API. Shot sequence data were obtained for the 500 player-seasons in consideration, with each sequence recording the sequential outcomes of all field goal attempts by a player within a player-season. For example, a shot sequence of ‘0011’, where 0’s represent missed shots and 1’s represent made shots, corresponds to a sequence in which a player missed the first two shots and made the last two shots. A missed shot was also defined as a “failure”, whereas a made shot was defined as a “success”. In total, data from 35,428 games across the 500 player-seasons was collected. 
+All data were collected using the R package hoopR [@noauthor_hoopr_nodate], which provides access to NBA play-by-play statistics through SportsDataverse API. Shot sequence data were obtained for the 500 player-seasons in consideration, with each sequence recording the sequential outcomes of all field goal attempts by a player within a player-season. For example, a shot sequence of ‘0011’, where 0’s represent missed shots and 1’s represent made shots, corresponds to a sequence in which a player missed the first two shots and made the last two shots. A missed shot was also defined as a “failure”, whereas a made shot was defined as a “success”. In total, data from 35,428 games across the 500 player-seasons were collected. 
 
 ### Exploratory Data Analysis
 
-The distribution of the total number of field goal attempts per season for the top 50 shooters is displayed in Figure __ below. Notably, the 2019-20 and 2020-21 seasons exhibit lower overall field goal attempts relative to other seasons, which is likely attributable to COVID-19-related restrictions that reduced the number of games played. Prior to those seasons, the distributions of field goal attempts are bimodal, with the larger peaks occurring at approximately 1,000 field goal attempts and the smaller peaks under 1,500 field goal attempts. After the 2019-20 and 2020-21 seasons, the distributions become more unimodal, with peaks shifting to greater than 1,000 field goal attempts. This pattern could suggest a delayed impact of the 2015-16 season, when long-distance shooting and faster pace became the primary emphasis for most teams. In general, we see an increase in field goal attempts post-COVID, which could alter hot-hand trends.
+The distribution of the total number of field goal attempts per season for the top 50 shooters is displayed in Figure 3.4 below. Notably, the 2019-20 and 2020-21 seasons exhibit lower overall field goal attempts relative to other seasons, which is likely attributable to COVID-19-related restrictions that reduced the number of games played. Prior to those seasons, the distributions of field goal attempts are bimodal, with the larger peaks occurring at approximately 1,000 field goal attempts and the smaller peaks under 1,500 field goal attempts. After the 2019-20 and 2020-21 seasons, the distributions become more unimodal, with peaks shifting to greater than 1,000 field goal attempts. This pattern could suggest a delayed impact of the 2015-16 season, when long-distance shooting and faster pace became the primary emphasis for most teams. In general, we see an increase in field goal attempts post-COVID, which could alter hot-hand trends.
 
 ```{r}
 #| include: false
@@ -231,9 +231,9 @@ ggplot(all_players, aes(x = FGA,
   scale_fill_viridis_d()
 ```
 
-For each shot sequence, multiple variables were collected or constructed to help analyze the hot-hand effect. We define an *opportunity* as a method of determining whether a player is currently on a hot streak. Specifically, an opportunity is any shot preceded by at least *k* consecutive made shots. In this analysis, *k* = 3 is used to remain consistent with prior hot-hand literature.
+For each shot sequence, multiple variables were collected or constructed to help analyze the hot-hand effect. An *opportunity* is defined as any shot preceded by at least *k* consecutive made shots, and is used as an indicator of whether a player is on a hot streak. In this analysis, *k* = 3 is used to remain consistent with prior hot-hand literature.
 
-For example, when *k* = 3, consider the sequence:
+For example, for *k* = 3, consider the sequence:
 
 \begin{center}
 0, 1, 1, 1, \underline{1}, \underline{0}, 1, 1, 1, \underline{1}
@@ -241,7 +241,7 @@ For example, when *k* = 3, consider the sequence:
 
 Shots that occur immediately after three consecutive made shots are classified as opportunity shots and are underlined in the example above. These opportunity shots are used to evaluate player performance while in a “hot” state.
 
-An initial analysis of the data reveals that the mean number of opportunities per game for qualified player-seasons fluctuates across seasons, albeit at small increments, as shown in Table __ below. This trend does not necessarily imply any increase in hot-hand shooting ability, as the increase could stem from a variety of factors. As discussed earlier, league-wide average field goal attempts per game have also increased over time, which could lead to a higher number of observed opportunities simply due to a greater volume of shots being taken.
+An initial analysis of the data reveals that the mean number of opportunities per game for qualified player-seasons fluctuates across seasons, albeit at small increments, as shown in Table 3.1 below. This trend does not necessarily imply any increase in hot-hand shooting ability, as the increase could stem from a variety of factors. As discussed earlier, league-wide average field goal attempts per game have also increased over time, which could lead to a higher number of observed opportunities simply due to a greater volume of shots being taken.
 
 ```{r}
 #| include: false
@@ -283,7 +283,7 @@ season_summary_opportunities |>
   kable(col.names = c("Season", "Mean Opportunities"))
 ```
 
-To adjust for the increase in the number of field goal attempts taken per game, the percentage of total field goal attempts that were opportunity shots was calculated and plotted in Figure __. The percentage of opportunity shots shows an overall upward trend across the period, but with noticeable year-to-year fluctuations. This increasing trend suggests a higher prevalence of streak occurrences over the past 10 seasons, which could be attributed to changes in offensive strategies or players becoming more capable of entering hot streaks. Importantly, this trend only describes a slight increase in the percentage of opportunity shots as opposed to an actual hot-hand effect.
+To adjust for the increase in the number of field goal attempts taken per game, the percentage of total field goal attempts that were opportunity shots was calculated and plotted in Figure 3.5. The percentage of opportunity shots shows an overall upward trend across the period, but with noticeable year-to-year fluctuations. This increasing trend suggests a higher prevalence of streak occurrences over the past 10 seasons, which could be attributed to changes in offensive strategies or players becoming more capable of entering hot streaks. Importantly, this trend only describes a slight increase in the percentage of opportunity shots as opposed to an actual hot-hand effect.
 
 ```{r}
 #| label: number-opportunities-per-total-shots-figure
@@ -305,7 +305,7 @@ ggplot(season_summary_opportunities, aes(x = season_end.y, y = prop_opps)) +
   scale_y_continuous(labels = scales::percent_format(accuracy = 0.1))
 ```
 
-Opportunity field goal percentage, defined as the field goal percentage on opportunity shots, for qualified player-seasons has also generally increased over time, as shown in Figure __. The graph starts at its lowest point during the 2015-16 season and increases steadily until the 2018-19 season, where it initially peaks. The 2019-20 season displays a steep decline in hot hand field goal percentage, but eventually recovers and continues to rise until it peaks during the 2023-24 season. The wave-like pattern of the smoothed line suggests variability over time rather than a strictly monotonic increase. An upward trend provides some preliminary evidence of an increase in hot-hand shooting ability over time, but needs to be formally tested for statistical significance as it may be attributable to random variation.
+Opportunity field goal percentage, defined as the field goal percentage on opportunity shots, for qualified player-seasons has also generally increased over time, as shown in Figure 3.6. The graph starts at its lowest point during the 2015-16 season and increases steadily until the 2018-19 season, where it initially peaks. The 2019-20 season displays a steep decline in hot hand field goal percentage, but eventually recovers and continues to rise until it peaks during the 2023-24 season. The wave-like pattern of the smoothed line suggests variability over time rather than a strictly monotonic increase. An upward trend provides some preliminary evidence of an increase in hot-hand shooting ability over time, but needs to be formally tested for statistical significance as it may be attributable to random variation.
 
 ```{r}
 #| label: opp-pct-figure
@@ -328,7 +328,7 @@ ggplot(season_summary_opportunities, aes(x = season_end.y, y = mean_opps_percent
   # scale_y_continuous(labels = function(x) sprintf("%.1f", x * 100))
 ```
 
-Although the trends discussed above may indicate a higher degree of streakiness, a meaningful evaluation requires a comparison to baseline shooting performance. Figure __ below addresses this by plotting the difference between opportunity FG% and baseline FG% for all qualified player-seasons from 2015-16 to 2024-25. For each season, the baseline FG% is computed by summing the total number of made field goals from qualified players during that season divided by the total number of field goal attempts during that season from qualified players. This provides a natural benchmark with which the opportunity FG% can be evaluated.
+Although the trends discussed above may indicate a higher degree of streakiness, a meaningful evaluation requires a comparison to baseline shooting performance. Figure 3.7 below addresses this by plotting the difference between opportunity FG% and baseline FG% for all qualified player-seasons from 2015-16 to 2024-25. For each season, the baseline FG% is computed by summing the total number of made field goals from qualified players during that season divided by the total number of field goal attempts during that season from qualified players. This provides a natural benchmark with which the opportunity FG% can be evaluated.
 
 ```{r}
 #| include: false
@@ -349,7 +349,7 @@ ggplot(season_summary_opportunities_diff, aes(x = season_end, y = diff)) +
   geom_smooth(method = "loess", se = F) +
   scale_y_continuous(labels = scales::percent_format(accuracy = 0.1)) +
   labs(
-    title = "Difference Between Opportunity and Baseline FG% by Season",
+    title = "Difference Between Opportunity and Baseline FG% by \nSeason",
     x = "Season",
     y = "Hot-hand FG% − Baseline FG%"
   ) +
@@ -363,7 +363,7 @@ ggplot(season_summary_opportunities_diff, aes(x = season_end, y = diff)) +
 
 The overall difference seems to fluctuate around zero, with most seasons possessing a slight negative difference, indicating that the success rate on opportunity shots is less than the success rate for baseline attempts on average. While there are isolated seasons, such as 2018-19 and 2023-24, in which hot-hand FG% is greater than the baseline FG%, these deviations are neither persistent nor large in magnitude. These results do not provide any preliminary evidence that a systematic hot hand effect exists on the aggregate level. It is important to note that this analysis remains subject to the selection bias identified by Miller and Sanjurjo, as the hot-hand FG% is computed by conditioning on prior shot outcomes. Therefore, more rigorous and detailed analysis methods that account for this bias are needed before any conclusions can be made regarding the hot-hand effect.
 
-The distance of each shot attempt was collected using hoopR’s coordinate system, with each shot containing an x and y-coordinate relative to the basket. Shot distances were then organized into one of three categories: close range (0-8 feet), mid-range (8-22 feet), and three-point (22+ feet). These category labels are approximate, as the distance of a three-point attempt varies depending on court location. For example, corner three-point attempts are taken from approximately 22 feet, whereas three-point attempts taken from the top of the arc must be at least 23.75 feet. The chosen cutoff values reflect the empirical distribution of shot distances, which tend to cluster in specific regions. Figure __ below displays the distribution of shot distances for all games within the 500 qualified player-seasons, with vertical lines marked at cutoff values of 8 and 22 feet. 
+The distance of each shot attempt was collected using hoopR’s coordinate system, with each shot containing an x and y-coordinate relative to the basket. Shot distances were then organized into one of three categories: close range (0-8 feet), mid-range (8-22 feet), and three-pointer (22+ feet). These category labels are approximate, as the distance of a three-point attempt varies depending on court location. For example, corner three-point attempts are taken from approximately 22 feet, whereas three-point attempts taken from the top of the arc must be at least 23.75 feet. The chosen cutoff values reflect the empirical distribution of shot distances, which tend to cluster in specific regions. Figure 3.8 below displays the distribution of shot distances for all games within the 500 qualified player-seasons, with vertical lines marked at cutoff values of 8 and 22 feet. 
 
 ```{r}
 #| include: false
@@ -393,10 +393,10 @@ The density plot exhibits clear clustering of shots near the basket (approximate
 Ross (2017) outlines various *streak statistics* that analyze finite sequences of binary outcomes. A streak statistic is a measure designed to quantify the “streakiness” of a given shot sequence. The streak statistic used in my analysis is defined below:
 
 \begin{quote}
-\textit{Difference in proportion of S (opportunities - non-opportunities)}: The difference between the proportion of success during opportunity shots and the proportion of success during non-opportunity shots. In the previous example, 0, 1, 1, 1, \underline{1}, \underline{0}, 1, 1, 1, \underline{1}, the value of the streak statistic was $\frac{2}{3} - \frac{6}{7} \approx -0.1905$ (Ross, 2017).
+\textit{Difference in proportion of S (opportunities - non-opportunities)}: The difference between the proportion of success on opportunity shots and the proportion of success on non-opportunity shots. In the previous example, 0, 1, 1, 1, \underline{1}, \underline{0}, 1, 1, 1, \underline{1}, the value of the streak statistic was $\frac{2}{3} - \frac{6}{7} \approx -0.1905$ (Ross, 2017).
 \end{quote}
 
-This statistic was chosen because it provides a direct comparison of shooting performance in a “hot” state against shooting performance outside of that state. Additionally, it has an intuitive interpretation under the assumption of independence, as it is often expected to be equal to zero. However, as discussed earlier, this expectation is biased downward in finite samples, which will be revisited in subsequent analysis.
+This statistic was chosen because it provides a direct comparison of shooting performance in a “hot” state against shooting performance outside of that state. Additionally, it has an intuitive interpretation under the assumption of independence, as it is often expected to be equal to zero. However, as discussed earlier, this expectation is biased downward in finite samples, which will be revisited in the subsequent analysis.
 
 # Permutation Testing
 
@@ -421,7 +421,7 @@ The steps of the procedure are outlined below:
 
 5. Calculate the proportion of permuted streak statistics that are at least as extreme as the observed statistic in the direction consistent with the hot-hand effect to obtain the *p*-value.
 
-This procedure addresses the bias identified in Gilovich et al. (1985) by directly constructing an appropriate null distribution from the observed shot sequence rather than relying on theoretical expectations under independence. The random permutation of observed outcomes satisfies the null assumption of independence, allowing us to compare the observed shot sequence to many sequences simulated under the null hypothesis. 
+This procedure addresses the bias identified in Gilovich, Vallone, & Tversky (1985) by directly constructing an appropriate null distribution from the observed shot sequence rather than relying on theoretical expectations under independence. The random permutation of observed outcomes satisfies the null assumption of independence, allowing us to compare the observed shot sequence to many sequences simulated under the null hypothesis. 
 
 ## Season-Level and Within-Game Shot Sequences
 
@@ -437,7 +437,7 @@ Figure __ (full results for all player-seasons provided in Appendix) displays th
 
 (**TABLE IN APPENDIX**)
 
-At an α = .05 individual significance level, only 10 out of 500 player-seasons exhibit a statistically discernible hot-hand effect. However, when conducting 500 independent hypothesis tests, we would expect approximately 0.5 * 500 = 25 false rejections purely by chance, even if no true hot-hand effect exists. Thus, the observed number of significant results is lower than what we would expect under the null hypothesis of independence. Figure ___ below displays the distribution of p-values for the 500 player-seasons. The distribution is skewed left, with many observations possessing p-values greater than 0.05.
+At an α = .05 individual significance level, only 10 out of 500 player-seasons exhibit a statistically discernible hot-hand effect. However, when conducting 500 independent hypothesis tests, we would expect approximately $0.5 * 500 = 25$ false rejections purely by chance, even if no true hot-hand effect exists. Thus, the observed number of significant results is lower than what we would expect under the null hypothesis of independence. Figure 4.1 below displays the distribution of p-values for the 500 player-seasons. The distribution is skewed left, with many observations possessing p-values greater than 0.05.
 
 ```{r}
 #| include: false
@@ -488,7 +488,7 @@ ggplot(qq_df, aes(expected, observed)) +
   theme_minimal()
 ```
 
-The QQ Plot (Figure ___) above compares the observed p-values from the permutation tests to the uniform distribution. Under the null assumption of independence, we expect the distribution of p-values to follow a uniform distribution, displayed by the diagonal line. The hot-hand effect suggests that the distribution of observed p-values should fall below the diagonal line since a larger proportion of player-seasons would be expected to show stronger evidence than under independence, resulting in lower quantiles. However, the observed p-values align above the diagonal line, which suggests that there is not only little evidence of a hot-hand effect, but also that players potentially perform slightly worse during opportunities than other shots. These results are aggregated at the player-season level, based on season-long shot sequences rather than game-level data. As a result, the analysis captures within-season patterns but may mask potential short-term dynamics. 
+The QQ Plot (Figure 4.2) above compares the observed p-values from the permutation tests to the uniform distribution. Under the null assumption of independence, we expect the distribution of $p$-values to follow a uniform distribution, displayed by the diagonal line. The hot-hand effect suggests that the distribution of observed p-values should fall below the diagonal line since a larger proportion of player-seasons would be expected to show stronger evidence than under independence, resulting in lower quantiles. However, the observed $p$-values align above the diagonal line, which not only suggests that there is not only little evidence of a hot-hand effect, but also that players potentially perform slightly worse during opportunities than other shots. These results are aggregated at the player-season level, based on season-long shot sequences rather than game-level data. As a result, the analysis captures within-season patterns but may mask potential short-term dynamics. 
 
 To account for the false discovery rate of hot-hand effects, the Benjamini-Hochberg procedure was applied to the existing p-values. After this adjustment, none of the player-seasons remain statistically significant, providing no evidence of a hot-hand effect after correcting for multiple comparisons.  
 
@@ -496,7 +496,7 @@ To account for the false discovery rate of hot-hand effects, the Benjamini-Hochb
 
 Season-long shot sequences were then deconstructed further into game-level sequences. In this sample, each observation corresponds to a binary sequence of makes and misses for a game within a player-season. Thus, each player-season contributes multiple sequences, one for each game in which the player recorded field goal attempts. The permutation test is applied to each game-level shot sequence separately, capturing within-game streak behavior and allowing for a more granular analysis of hot-hand shooting patterns. Results for game-level data are often considered more practical for hot-hand analysis than season-long data since most people attribute the hot-hand effect to individual games rather than prolonged periods of time. However, using game-level data decreases the statistical power of the permutation test considerably, as shot sequences typically contain very few opportunities, if any.
 
-In total, 35,428 shot sequences were considered for the game-level analysis. The distribution of total FGA per game for qualified players is displayed below in Figure ___, with a mean of 16.50 FGA per game and a standard deviation of 5.19 FGA per game. 
+In total, 35,428 shot sequences were considered for the game-level analysis. The distribution of total FGA per game for qualified players is displayed below in Table 4.1 and Figure 4.3, with a mean of 16.5 FGA per game and a standard deviation of 5.19 FGA per game. 
 
 ```{r}
 #| label: num-shots-per-game-table
@@ -545,7 +545,7 @@ A Monte Carlo simulation was used to approximate the expected value of the strea
 
 **INSERT ALGORITHM HERE**
 
-Figure __ below displays the expected value of the streak statistic using Monte Carlo simulation. The parameter $p$ varies from 0.40 to 0.60, in increments of 0.05, reflecting plausible shooting proportions observed in game settings, although more extreme values exist due to small sample sizes. The overall sample proportion of made shots across all 35,428 qualified games was approximately 0.467. For each $(n, p)$ pair, the simulation was conducted using 10,000 trials and the resulting expected values are presented in the figure below.
+Figure 4.4 below displays the expected value of the streak statistic using Monte Carlo simulation. The parameter $p$ varies from 0.40 to 0.60, in increments of 0.05, reflecting plausible shooting proportions observed in game settings, although more extreme values exist due to small sample sizes. The overall sample proportion of made shots across all 35,428 qualified games was approximately 0.467. For each $(n, p)$ pair, the simulation was conducted using 10,000 trials and the resulting expected values are presented in the figure below.
 
 ```{r}
 #| include: false
@@ -569,22 +569,22 @@ ggplot(mcmc_results, aes(x = n, y = expected_value, color = factor(sprintf("%.2f
     y = expression(E[hat(p)[opp] - hat(p)[others]]),
     color = "Success Probability"
   ) +
-  theme_minimal(base_size = 13) +
+  theme_minimal() +
   theme(
-    plot.title = element_text(hjust = 0.5, face = "bold"),
-    plot.subtitle = element_text(hjust = 0.5),
+    plot.title = element_text(face = "bold"),
+    #plot.subtitle = element_text(hjust = 0.5),
     legend.position = "right"
   ) +
   guides(color = guide_legend(reverse = TRUE))
 ```
 
-The curves exhibit a consistent vertical ordering with higher success probabilities corresponding to a smaller magnitude of bias. Differences in bias across success probabilities appear relatively consistent, indicating that the bias generally scales proportionally with $p$. Additionally, each line appears to be monotonically increasing towards 0, meaning that the expected bias decreases as n increases for a given success probability $p$.
+The curves exhibit a consistent vertical ordering with higher success probabilities corresponding to a smaller magnitude of bias. Differences in bias across success probabilities appear relatively consistent, indicating that the bias generally scales proportionally with $p$. Additionally, each line appears to be monotonically increasing towards 0, meaning that the expected bias decreases as $n$ increases for a given success probability $p$.
 
 These results can be compared to the null statistics of each observed shot sequence generated by the permutation test. However, it is important to note that shot sequences typically vary with $p$ and $n$, which would alter the magnitude of bias for that particular sequence. 
 
 ## Bias-Adjusted Streak Statistic
 
-The permutation test was run for all shot sequences in the sample. Sequences with zero opportunities were assigned a p-value of NA. Table __ in the Appendix contains a sample of 30 games and the collected statistics through the permutation tests. To visualize the effect of different sample sizes on the null distribution, three games of different sample sizes were collected. The three selected games contained 13, 16, and 20 shots to represent Q1, the median, and Q3, respectively. Each game had a streak statistic of -0.5 for consistency. The null distributions along with their corresponding p-value are shown in Table __ below.
+The permutation test was run for all shot sequences in the sample. Sequences with zero opportunities were assigned a $p$-value of *NA*. Table __ in the Appendix contains a sample of 30 games and the collected statistics through the permutation tests. To visualize the effect of different sample sizes on the null distribution, three games of different sample sizes were collected. The three selected games contained 13, 16, and 20 shots to represent Q1, the median, and Q3, respectively. Each game had a streak statistic of -0.5 for consistency. The observed and null statistics are shown in Table 4.2 below.
 
 
 ```{r}
@@ -595,15 +595,14 @@ The permutation test was run for all shot sequences in the sample. Sequences wit
 all_games_analysis |>
   filter(player %in% c("Jordan Clarkson", "Tobias Harris", "Kyle Kuzma"),
          game_id %in% c(401267657, 400975574, 401468533)) |>
-  select(player, game_id, total_shots, total_makes, opp_pct, diff, null_mean, adj_diff, p_value) |>
+  select(player, total_shots, total_makes, opp_pct, diff, null_mean, adj_diff) |>
   arrange(desc(total_shots)) |>
   mutate(null_mean = round(null_mean, 3),
-         adj_diff = round(adj_diff, 3),
-         p_value = round(p_value, 3)) |>
-  kable(col.names = c("Player", "Game ID", "Total Shots", "Total Makes", "Opportunity Percentage", "Difference in Proportions", "Null Mean", "Adjusted Difference in Proportions", "P-value"))
+         adj_diff = round(adj_diff, 3)) |>
+  kable(col.names = c("Player", "Total Shots", "Total Makes", "Opportunity %", "Difference in Proportions", "Null Mean", "Bias-Adjusted Difference"))
 ```
 
-The *Difference in Proportions* column represents the streak statistic, defined as the difference between the proportion of makes on opportunity shots and the proportion of makes on all other shots. However, this statistic is subject to the bias discovered by Miller & Sanjurjo (2018). The *Adjusted Difference in Proportions* column corrects this statistic by subtracting the null mean obtained from the observed streak statistic. This adjustment accounts for bias in the original streak statistic, yielding a bias-adjusted streak statistic.
+The *Difference in Proportions* column represents the streak statistic, defined as the difference between the proportion of makes on opportunity shots and the proportion of makes on all other shots. However, this statistic is subject to the bias discovered by Miller & Sanjurjo (2018). The *Bias-Adjusted Difference* column corrects this statistic by subtracting the null mean obtained from the observed streak statistic. This adjustment accounts for bias in the original streak statistic, yielding a bias-adjusted streak statistic.
 
 As expected, the null means generally seem to decrease as the number of shots increase, although some trend deviation remains due to differences in field goal percentages across games (Figure __, Appendix). The average null mean across all games with at least one opportunity was approximately -0.229, indicating a substantial bias in the streak statistic. This estimated bias agrees with the results obtained from the Monte Carlo simulation, as our overall success probability was approximately 0.467 and the average number of shots taken per game was approximately 16.5. The null standard deviations are relatively large compared to the season-long analysis, reflecting the high variability inherent in short shot sequences. Because many games contain a limited number of opportunities, the field goal percentage on those opportunities can vary substantially, leading to highly volatile streak statistics. For example, in games with only one opportunity, the opportunity field goal percentage can take on only two values (0 or 1). As a result, the streak statistic is highly discrete, and the corresponding permutation distribution is characterized by a small set of possible values that can differ markedly from one another, contributing to considerable variability in the null distribution. Consequently, games with few opportunities will also have lower statistical power, making it more difficult to detect meaningful hot-hand trends.
 
@@ -611,7 +610,7 @@ As expected, the null means generally seem to decrease as the number of shots in
 
 Overall, only 562 out of 20,865 games (approximately 2.69%) that included at least one opportunity produced a statistically significant streak statistic at the α = 0.05 significance level. This proportion is lower than what would be expected under the assumption of independence, providing little evidence in support of a within-game hot-hand effect. Furthermore, the mean of the *Adjusted Difference in Proportions* column across all games with at least one opportunity was approximately -0.0136, indicating that, on average, players performed slightly worse on opportunity shots than would be expected under independence.
 
-Figure __ provides the distributions of the bias-adjusted streak statistic by season. The distributions appear largely consistent across seasons, exhibiting similar bimodal shapes and comparable peak locations. In particular, each season shows two prominent peaks centered at approximately -0.25 and 0.25. The black points denote the seasonal means of the null-adjusted streak statistic, which are generally centered slightly below zero. This aligns with the previous finding that players tend to perform marginally worse on opportunity shots relative to other shots after adjusting for the bias. One exception is the 2018-19 season in which the mean appears slightly above zero, suggesting a small, though likely negligible, positive hot-hand effect. The similarity between the distributions suggests little evidence of systematic seasonal differences in hot-hand effects.
+Figure 4.5 provides the distributions of the bias-adjusted streak statistic by season. The distributions appear largely consistent across seasons, exhibiting similar bimodal shapes and comparable peak locations. In particular, each season shows two prominent peaks centered at approximately -0.25 and 0.25. The black points denote the seasonal means of the null-adjusted streak statistic, which are generally centered slightly below zero. This aligns with the previous finding that players tend to perform marginally worse on opportunity shots relative to other shots after adjusting for the bias. One exception is the 2018-19 season in which the mean appears slightly above zero, suggesting a small, though likely negligible, positive hot-hand effect. The similarity between the distributions suggests little evidence of systematic seasonal differences in hot-hand effects.
 
 ```{r}
 #| label: null-adjusted-ridge-figure
@@ -647,13 +646,13 @@ all_games_analysis %>%
   theme_minimal() +
   theme(legend.position = "none") +
   labs(x = "Difference in FG% on Opportunities vs. Other Shots (Null-Adjusted)", y = "Season",
-       title = "Seasonal Differences: FG% on Opportunities vs. Other Shots (Null-Adjusted)") +
+       title = "Seasonal Differences: FG% on Opportunities vs. Other Shots (Bias-Adjusted)") +
   scale_fill_viridis_d() +
   scale_x_continuous(labels = scales::percent_format(accuracy = 1)) # x-axis as percentages
 
 ```
 
-The observed bimodality can be explained by the structure of the streak statistic that results from small shot sequences. Because many games contain few opportunities, the opportunity field goal percentage is often either very low (e.g., 0) or moderate (e.g., around 0.5), while the field goal percentage on other shots is typically near 0.5, reflecting both the larger number of “other” shot attempts in each game and the fact that league-wide field goal percentages tend to be close to this value. Consequently, the unadjusted streak statistic frequently takes values near -0.5 or 0. Figure __ displays this pattern by using the three previously sampled games which contained different numbers of total shots and successful shots. The null distributions reveal points clustering at approximately -0.5 and 0, confirming our previous intuition. 
+The observed bimodality can be explained by the structure of the streak statistic that results from small shot sequences. Because many games contain few opportunities, the opportunity field goal percentage is often either very low (e.g., 0) or moderate (e.g., around 0.5), while the field goal percentage on other shots is typically near 0.5, reflecting both the larger number of non-opportunity ("other") shot attempts in each game and the fact that league-wide field goal percentages tend to be close to this value. Consequently, the unadjusted streak statistic frequently takes values near -0.5 or 0. Figure 4.6 displays this pattern by using the three previously sampled games which contained different numbers of total shots ($n$) and successful shots ($m$). The null distributions reveal points clustering at approximately -0.5 and 0, confirming our previous intuition. 
 
 
 ```{r}
@@ -817,10 +816,10 @@ ggplot(df_all, aes(x = stat)) +
   facet_wrap(~scenario, scales = "fixed") +
   labs(
     title = "Null Distributions of Streak Statistic",
-    x = "Streak Statistic",
+    x = "Difference in Proportions (opportunity - other)",
     y = "Density"
   ) +
-  theme_minimal(base_size = 13) +
+  theme_minimal() +
   geom_text(
     data = mean_df,
     aes(x = x, y = y,
@@ -834,7 +833,7 @@ ggplot(df_all, aes(x = stat)) +
 
 After adjusting for the null mean (approximately -0.23), these values shift to around -0.25 and 0.25, producing the observed peaks. This pattern reflects the high variability of the statistic rather than systematic differences across seasons, providing little evidence of a meaningful season-specific hot-hand effect. 
 
-To examine the results further, the games were categorized by the number of opportunities in their respective sequence in Table ___. The table shows an overall negative relationship between the number of opportunities within a game and the number of games associated with the number of opportunities. This is expected because qualifying for opportunity shots is increasingly difficult as the number of opportunities increases. The *Proportion of Games with Adj_Diff* > 0 column represents the proportion of games in which the null-adjusted streak statistic was greater than 0, indicating a positive directional effect in favor of the hot hand.
+To examine the results further, the games were categorized by the number of opportunities in their respective sequence in Table 4.3. The table shows an overall negative relationship between the number of opportunities within a game and the number of games associated with the number of opportunities. This is expected because qualifying for opportunity shots is increasingly difficult as the number of opportunities increases. The *Proportion of Games with Adj_Diff* > 0 column represents the proportion of games in which the bias-adjusted streak statistic was greater than 0, indicating a positive directional effect in favor of the hot hand.
 
 ```{r}
 #| label: adj-diff-by-opps-table
@@ -867,29 +866,54 @@ opp_positive_prop <- all_games_analysis %>%
   )
 
   opp_positive_prop |>
-    kable(col.names = c("Number of Opportunities", "Number of Games", "Proportion of Games with Adj_Diff > 0"))
+    kable(col.names = c("Number of Opportunities", 
+                        "Number of Games", 
+                        "Proportion with Positive Adjusted Difference")) |>
+    kable_styling(full_width = F)
 ```
 
-The proportion of games with adjusted differed in proportions is undefined for games with exactly 0 or 14 opportunities. Games with zero opportunities do not yield a streak statistic, and no games in the sample contain exactly 14 opportunities. Among games with at least one opportunity, those with only one opportunity comprise approximately (39.22%), representing the largest share across all opportunity counts. However, only about 4.3% of these games exhibit a positive null-adjusted difference in proportions, indicating minimal evidence of a hot-hand effect for single-opportunity games. 
+The proportion of games with adjusted difference in proportions is undefined for games with exactly 0 or 14 opportunities. Games with zero opportunities do not yield a streak statistic, and zero games in the sample contain exactly 14 opportunities. Among games with at least one opportunity, those with only one opportunity comprise approximately (39.22%), representing the largest share across all opportunity counts. However, only about 4.3% of these games exhibit a positive null-adjusted difference in proportions, indicating minimal evidence of a hot-hand effect for single-opportunity games. 
 
-This result is consistent with the structural constraints of the shot sequence and qualifications of an opportunity shot. For a game to contain exactly one opportunity, the player must miss the opportunity shot. Otherwise, a made opportunity shot would generate an additional opportunity on the subsequent attempt. Consequently, the only scenario in which a positive adjusted streak statistic can occur in a one-opportunity game is when the lone opportunity arises at the end of the sequence, such as when the player makes the final four shots of the game with no prior opportunities. In this case, the final shot constitutes a successful opportunity while precluding the possibility of additional opportunities. Because this scenario occurs infrequently, the proportion of games with a positive adjusted streak statistic is correspondingly very low, as reflected by the 4.3% figure. 
+This result is consistent with the structural constraints of the shot sequence and qualifications of an opportunity shot. For a game to contain exactly one opportunity, the player must miss the opportunity shot. Otherwise, a made opportunity shot would generate an additional opportunity on the subsequent attempt. Consequently, the only scenario in which a positive adjusted streak statistic can occur in a one-opportunity game is when the lone opportunity arises at the end of the sequence, such as when the player makes the final four shots of the game with no prior opportunities. In this case, the final shot constitutes a successful opportunity while precluding the possibility of additional opportunities. Because this scenario occurs infrequently, the proportion of games with a positive adjusted streak statistic is correspondingly low, as reflected by the 4.3% figure. 
 
-In games with more than one opportunity, the proportion of games exhibiting a positive adjusted streak statistic is substantially larger than in single-opportunity games, with all but the 13-opportunity category exceeding 50%. This pattern can be explained by the underlying structure of the data, as multiple opportunities within a game typically arise from prior successful opportunity shots, leading to higher opportunity field goal percentages and, consequently, larger adjusted streak statistics. For instance, consider a shot sequence with five opportunity shots. Due to the limited number of shots that a player can take within a game, it is very likely that the opportunity shots clump together, forming a string of successful opportunity shots. The shot sequences below illustrates this concept with five opportunity shots.
-
-(**ADD MORE TO THIS SECTION LATER**)
-(**SEE PAGE 32 & 33 IN SCRIPT**)
+In games with more than one opportunity, the proportion of games exhibiting a positive adjusted streak statistic is substantially larger than in single-opportunity games, with all but the 13-opportunity category exceeding 50%. This pattern can be explained by the underlying structure of the data, as multiple opportunities within a game typically arise from prior successful opportunity shots, leading to higher opportunity field goal percentages and, consequently, larger adjusted streak statistics. For instance, consider a shot sequence with five opportunity shots. Due to the limited number of shots that a player can take within a game, it is very likely that the opportunity shots clump together, forming a string of successful opportunity shots. The example shot sequences below illustrates this concept, with each containing five opportunity shots.
 
 \begin{center}
-0, 1, 1, 1, \underline{1}, \underline{0}, 1, 1, 1, \underline{1}, \underline{1}, \underline{0}
+\textbf{Sequence 1:} \\
+0, 1, 1, 1, \underline{1}, \underline{1}, \underline{1}, \underline{1}, \underline{0}, 0, 1, 1, 0, 0, 0
+
+\vspace{0.5em}
+
+\textbf{Sequence 2:} \\ 
+0, 1, 1, 1, \underline{1}, \underline{0}, 0, 1, 1, 1, \underline{1}, \underline{1}, \underline{0}, 0, 0
+
+\textbf{Sequence 3:} \\
+0, 0, 1, 1, 1, \underline{0}, 0, 1, 1, 1, \underline{0}, 0, 0, 1, 1, 1, \underline{0}, 0, 0, 0, 1, 1, 1, \underline{1}, \underline{0}
 \end{center}
 
-# Logistic Hierarchical Models
+The difference in proportions between opportunty and non-opportunty shots for each sequence s ven by:
+
+\[
+\text{Sequence 1: } $\frac{4}{5}$ - $\frac{5}{10}$ = 0.3
+\]
+\[
+\text{Sequence 2: } $\frac{3}{5}$ - $\frac{6}{10}$ = 0
+\]
+\[
+\text{Sequence 3: } $\frac{1}{5}$ - $\frac{12}{20}$ = -0.4
+\]
+
+Sequences 1 and 2 contain opportunity shots that are more tightly clustered, necessitating a sequence of successful opportunity shots. This results in higher opportunity field goal percentages, which ultimately causes the streak statistic to increase. In contrast, sequence 3 contains opportunity shots that are more dispersed throughout the sequence, indicating more unsuccessful opportunity shots. This structure decreases the field goal percentage on opportunity shots, resulting in a lower streak statistic. 
+
+Importantly, sequences similar to 1 and 2 are more likely to occur in real game data, as the number of shots taken during the duration of a game are limited and multiple opportunities typically arise from consecutive made shots. This structural feature likely contributes to the increased number of games with positive bias-adjusted streak statistics for games with a large number of opportunity shots.
+
+# Logistic Hierarchical Model
 
 While the permutations tests for both season-long and within-game sequences provide little evidence of a hot-hand effect, these analyses do not account for contextual factors that may influence shooting performance. Incorporating additional variables into our analysis allows for a reexamination of the hot-hand effect while accounting for specific in-game conditions.
 
 ## Shot Distance Analysis
 
-Shot distances were analyzed to assess whether players exhibit different shooting distances on opportunity shots compared to non-opportunity shots. Summary statistics for quantitative shot distance by opportunity status are presented in Table ___, where “all” includes both opportunity and other shots.
+Shot distances were analyzed to assess whether players exhibit different shooting distances on opportunity shots compared to non-opportunity shots. Summary statistics for quantitative shot distance by opportunity status are presented in Table 5.1, where “all” includes both opportunity and other shots.
 
 ```{r}
 #| label: shot-distance-by-opps-table
@@ -905,7 +929,7 @@ kable(shot_table, digits = 2,
       col.names = c("Shot Type", "Average Distance (Ft.)"))
 ```
 
-As shown in Table ___, opportunity shots are taken from a greater average distance than other shots, suggesting increased difficulty in these situations. Figure __ displays the distribution of shot distances by shot type, with both curves exhibiting a similar bimodal shape corresponding to close-range and three-point attempts. However, while the peaks of the "other" shot distribution are of roughly equal height, the opportunity shot distribution features a more pronounced peak at longer distances compared to its peak at shorter distances. This shift indicates that opportunity shots are more likely to be taken from longer distances than other shots, reinforcing the pattern observed in Table __.
+The table reveals that opportunity shots are taken from a greater average distance than other shots, suggesting increased difficulty in these situations. Figure 5.1 displays the distribution of shot distances by shot type, with both curves exhibiting a similar bimodal shape corresponding to close-range and three-point attempts. However, while the peaks of the "other" shot distribution are of roughly equal height, the opportunity shot distribution features a more pronounced peak at longer distances compared to its peak at shorter distances. This shift indicates that opportunity shots are more likely to be taken from longer distances than other shots, reinforcing the pattern observed in Table 5.1.
 
 ```{r}
 #| label: shot-dist-density-figure
@@ -932,9 +956,9 @@ ggplot(shot_level_data,
 
 To further solidify the differences between opportunity and non-opportunity (other) shots, the average shot distance for each shot type was computed within each player-season to account for player-season variation. For each player-season, the difference between mean opportunity shot distance and mean non-opportunity shot distance was calculated. The mean of these differences was approximately 2.14 feet, indicating that, on average, opportunity shots were taken from a greater distance than other shots within the same player-season. 
 
-A paired t-test was conducted to assess whether the mean difference in shot distance was greater than zero. The results provide strong evidence that opportunity shots are taken from a greater distance than non-opportunity shots, *t*(499) = 30.94, *p* < 0.001. The estimated mean difference was 2.14 feet, with a one-sided 95% confidence interval indicating that the true mean difference is at least 2.03 feet.
+A paired *t*-test was conducted to assess whether the population mean difference in shot distance was greater than zero. The results provide strong evidence that opportunity shots are taken from a greater distance than non-opportunity shots, *t*(499) = 30.94, *p* < 0.001. The estimated mean difference was 2.14 feet, with a one-sided 95% confidence interval indicating that the true mean difference is at least 2.03 feet.
 
-Figure ____ presents a scatterplot of average shot distance on opportunity shots versus average shot distance on non-opportunity shots for each player-season, grouped by position. Positions were categorized into guard, forward, and center based on classifications from Basketball Reference (Sports Reference LLC. Basketball-Reference.com - Basketball Statistics and History. https://www.basketball-reference.com/. Accessed Oct 15, 2025). The diagonal reference line represents equality in shot distance between the two shot types. The majority of points lie above this line, indicating that, for most player-seasons, opportunity shots are taken from greater distances than non-opportunity shots.
+Figure 5.2 presents a scatterplot of average shot distance on opportunity shots versus average shot distance on non-opportunity shots for each player-season, grouped by position. Positions were categorized into guard, forward, and center based on classifications from Basketball Reference [@noauthor_nba_nodate]. The diagonal reference line represents equality in shot distance between the two shot types. The majority of points lie above this line, indicating that, for most player-seasons, opportunity shots are taken from greater distances than non-opportunity shots.
 
 ```{r}
 #| include: false
@@ -967,7 +991,7 @@ ggplot(player_season_distance_new,
   labs(
     x = "Other Distance (Ft.)",
     y = "Opportunity Distance (Ft.)",
-    title = "Average Opportunity Distance vs. Non-Opportunity Distance by Position",
+    title = "Average Opportunity Distance vs. Non-Opportunity \nDistance by Position",
     color = "Position"
   )
 ```
@@ -1001,7 +1025,7 @@ shot_level_data %>%
         col.names = c("Shot Type", "Close", "Mid-range", "Three-Pointer"))
 ```
 
-Table __, along with Figure _, reveals that a larger proportion of opportunity shots were three-pointers compared to other shots, while a smaller proportion were close shots. The proportion of mid-range shots remained relatively similar between shot types. A chi-square test of independence confirmed that the distribution of distance categories is dependent on shot type $\chi^2(2)$ = 420.55, *p* < .001. 
+Table 5.2, along with Figure 5.3, reveals that a larger proportion of opportunity shots were three-pointers compared to other shots, while a smaller proportion were close shots. The proportion of mid-range shots remained relatively similar between shot types. A chi-square test of independence confirmed that the distribution of distance categories is dependent on shot type $\chi^2(2)$ = 420.55, *p* < .001. 
 
 ```{r}
 #| include: false
@@ -1050,7 +1074,7 @@ ggplot(shot_level_data,
     fill = "Distance Category"
   ) +
   scale_y_continuous(labels = scales::percent) +
-  theme_minimal(base_size = 13)
+  theme_minimal()
 ```
 
 This phenomenon likely arises from a combination of psychological and strategic factors. Players may describe the sensation of being “on fire”, referring to a mental and physical state of heightened focus and elevated performance. This can lead to increased confidence and manifest in more aggressive shot selection, including attempts from greater distances. The general public commonly refers to this state as heat-check behavior, as players attempt to capitalize on their recent success. Other possible explanations involve strategic adjustments from both teams. Defenses may adjust by applying tighter coverage to a perceived “hot” player, forcing shots from further distances or worse positions. In turn, offenses may settle for longer-distance shots, as these are often quicker to attempt or more readily available under increased defensive pressure.
@@ -1059,10 +1083,10 @@ Due to this phenomenon, a new model that includes shot distance as a variable wo
 
 ## Model Specification
 
-A logistic hierarchical model was constructed to evaluate the probability of a successful shot based on specific in-game variables and random effects. The equation incorporates specific levels are .... The variables and random effects are outlined in Table __.
+A logistic hierarchical model was constructed to evaluate the probability of a successful shot based on specific in-game variables and random effects. The variables and random effects are outlined in Table 5.3.
 
-$logit(y_{ijk}) = \beta_0 + \beta_1{opportunity_{ij}} + \mu_{0j} + \mu_{1j}opportunity_{ij} + \epsilon_{ij}$
 \begin{align*}
+\text{logit}(y_{ijk}) &= \beta_0 + \beta_1 \, opportunity_{ij} + u_{0j} + u_{1j} \, opportunity_{ij} + \epsilon_{ij} \\
 u_{0j} &\sim \mathcal{N}(0, \sigma^2_{u0}) \\
 u_{1j} &\sim \mathcal{N}(0, \sigma^2_{u1}) \\
 \epsilon_{ij} &\sim \mathcal{N}(0, \sigma^2)
@@ -1073,6 +1097,7 @@ u_{1j} &\sim \mathcal{N}(0, \sigma^2_{u1}) \\
 #| label: hierarchical-model-variable-descriptions-table
 #| echo: false
 #| tbl-cap: "Hierarchical Model Variable Descriptions."
+#| warning: false
 
 var_table <- data.frame(
   Variable = c("make", "intercept", "is_opportunity", "dist_category", "is_opportunity*dist_category",
@@ -1100,28 +1125,192 @@ var_table <- data.frame(
 
 kable(var_table, booktabs = TRUE, 
       col.names = c("Variable", "Description", "Effect Type"),
-      escape = F) %>%
-  kable_styling(latex_options = c("hold_position"))
+      escape = T) %>%
+  kable_styling(latex_options = c("hold_position"),
+                full_width = F)
 ```
 
-Hot-hand theory posits that the probability of a successful shot increases on opportunity shots compared to non-opportunity shots, resulting in a positive coefficient for the opportunity variable. The inclusion of this variable allows us to assess how the probability of a successful shot varies with opportunity status while simultaneously accounting for other factors.
+Hot-hand theory posits that the probability of a successful shot increases on opportunity shots compared to non-opportunity shots, which many attribute to a positive coefficient for the opportunity variable. However, this coefficient is subject to the small-sample bias discovered by Miller and Sanjurjo, which must be accounted for. The inclusion of this variable allows us to assess how the probability of a successful shot varies with opportunity status while simultaneously accounting for other factors.
 
 Player and season random effects were also included in the hierarchical model to account for unexplained heterogeneity in shooting performance and opportunity effects. In particular, the model includes random slopes for the opportunity effect across different players rather than assuming a uniform effect. Allowing different slopes for opportunity effects allows us to see which players are most impacted, or potentially not impacted, by hot-hand opportunities. Season random intercepts were also included to account for differences in baseline shooting ability across seasons.
 
 ## Coefficient Bias
 
-The opportunity coefficient is prone to the small-sample bias present in permutation testing. Therefore, the coefficient becomes inflated and overestimates the true effect of an opportunity shot on success probability. To account for this, a simulation was run 
+The opportunity coefficient is prone to the small-sample bias present in permutation testing. Therefore, the coefficient becomes inflated and overestimates the true effect of an opportunity shot on success probability. To account for this, a random sample of 100 games was selected from the full dataset. The following steps were taken to obtain a null distribution of opportunity coefficients from the sample:
+
+1. Randomly permute the shot sequences within the 100 sampled player-games to simulate independent shots.
+2. Fit the logistic hierarchical model for the simulated data to obtain a null opportunity coefficient.
+3. Repeat steps 1-2 many times (e.g., 10,000 trials) to obtain a null distribution of opportunity coefficients.
+4. Calculate the mean of the null distribution to obtain the opportunity coefficient expected under independence.
+
+The procedure described above contained only 100 games due to computational limitations. Therefore, the sample may not fully represent the full dataset, but should provide a general estimate for the opportunity coefficient expected under independence.
 
 ## Results
 
+The null distribution of opportunity coefficients for the 100 randomly sampled games is displayed in Figure 5.4. The mean of this distribution provides an estimate of the opportunity coefficient expected under independence and will be used to determine if the observed coefficient exceeds what would be expected under independence.
+
 ```{r}
-#| label: hierarchical-model-coefficients-table
-#| echo: false
-#| tbl-cap: "Hierarchical Model Coefficients."
+#| include: false
 
-
+perm_betas <- readRDS(here::here("Data", "perm_betas.rds"))
+perm_betas_clean <- readRDS(here::here("Data", "perm_betas_clean.rds"))
 ```
 
+```{r}
+#| include: false
+
+# compute stats
+mean_perm_betas <- mean(perm_betas_clean, na.rm = TRUE)
+sd_perm_betas   <- sd(perm_betas_clean, na.rm = TRUE)
+```
+
+
+```{r}
+#| label: perm-betas-hist-figure
+#| echo: false
+#| fig-cap: "Histogram of Simulated Opportunity Coefficients under Independence."
+#| message: false
+
+ggplot(data.frame(x = perm_betas_clean), aes(x = x)) +
+  geom_histogram(bins = 40, color = "black", fill = "#2C7FB8") +
+  
+  # vertical line for mean
+  geom_vline(xintercept = mean_perm_betas, linetype = "dashed", linewidth = 1) +
+  
+  # annotate mean and sd in top-left
+  annotate("text",
+           x = min(perm_betas_clean, na.rm = TRUE),
+           y = Inf,
+           hjust = 0,
+           vjust = 2,
+           label = paste0(
+             "Mean = ", round(mean_perm_betas, 3),
+             "\nSD = ", round(sd_perm_betas, 3)
+           )) +
+  
+  labs(
+    title = "Distribution of Permutation Betas under Independence",
+    x = expression(beta[opportunity]),
+    y = "Frequency"
+  ) +
+  
+  theme_minimal()
+```
+
+The mean opportunity coefficient of the simulated trials under independence is approximately 0.13, suggesting the existence of a bias that overestimates the true hot-hand effect. We now compare these results to the coefficients obtained from the observed hierarchical model. The fixed coefficient estimates for the full data are listed in Table 5.4 and random effect coefficients are listed in Table 5.5. 
+
+```{r}
+#| include: false
+
+mixed.opportunities <- readRDS(here::here("Data", "mixed.opportunities.rds"))
+```
+
+```{r}
+#| label: hierarchical-model-fixed-coefficients-table
+#| echo: false
+#| tbl-cap: "Fixed Effect Coefficients."
+
+coef_table <- data.frame(
+  Coefficient = c(
+    "Intercept",
+    "is_opportunity",
+    "dist_categoryMidrange",
+    "dist_categoryThreePoint",
+    "is_opportunity:dist_categoryMidrange",
+    "is_opportunity:dist_categoryThreePoint"
+  ),
+  Estimate = c(0.3207, 0.0634, -0.6126, -0.8927, -0.0826, -0.1224),
+  `Std. Error` = c(0.0173, 0.0168, 0.0070, 0.0068, 0.0245, 0.0232),
+  `z value` = c(18.5423, 3.7856, -87.1207, -130.3290, -3.3723, -5.2717),
+  `p-value` = c("0e+00", "2e-04", "0e+00", "0e+00", "7e-04", "0e+00")
+)
+
+kable(coef_table, booktabs = TRUE, align = "lrrrr",
+      col.names = c("Coefficient", "Estimate", "Std. Error", "z value", "p-value")) %>%
+  kable_styling(latex_options = c("hold_position"))
+```
+
+
+```{r}
+#| label: hierarchical-model-random-coefficients-table
+#| echo: false
+#| tbl-cap: "Random Effects (Standard Deviations)"
+
+rand_table <- data.frame(
+  Group = c("Player", "Player", "Season"),
+  Effect = c("Intercept", "is_opportunity", "Intercept"),
+  `Std. Dev.` = c(0.1056, 0.0002, 0.0449)
+)
+
+kable(
+  rand_table,
+  booktabs = TRUE,
+  col.names = c("Group", "Effect", "Std. Dev.")
+) %>%
+  kable_styling(latex_options = c("hold_position"))
+```
+
+The opportunity indicator variable yields a coefficient of 0.0634, which is notably lower than the expected opportunity coefficient under independence. This suggests that the estimated hot-hand effect in the hierarchical model is actually weaker than what would be expected if shots were independent. The statistically significant $p$-value for the opportunity coefficient in Table 5.4 should be interpreted with caution, as it is derived by comparing the estimated coefficient to 0. However, the simulation of null opportunity coefficients for the 100 randomly sampled games yielded an estimated coefficient of 0.13, which represents the actual value that should be compared to our observed coefficient. Figure 5.5 displays the observed opportunity coefficient in relation to the null coefficients, along with the $p$-value describing the proportion of simulated trials with an opportunity effect as strong as the observed effect.
+
+```{r}
+#| label: perm-betas-hist-pvalue-figure
+#| echo: false
+#| fig-cap: "P-value of observed opportunity effect compared to null opportunity effects."
+#| message: false
+
+obs_beta <- 0.0634
+
+p_value <- mean(perm_betas_clean >= obs_beta, na.rm = TRUE)
+
+ggplot(data.frame(x = perm_betas_clean), aes(x = x)) +
+  
+  # histogram (base layer)
+  geom_histogram(bins = 40, color = "black", fill = "grey80") +
+  
+  # shaded region for p-value (right tail)
+  geom_histogram(
+    data = subset(data.frame(x = perm_betas_clean), x >= obs_beta),
+    aes(x = x),
+    bins = 40,
+    fill = "#D95F0E",
+    color = "black"
+  ) +
+  
+  # observed beta line
+  geom_vline(xintercept = obs_beta, linetype = "dashed", linewidth = 1) +
+  
+  # annotations (mean, sd, p-value)
+  annotate("text",
+           x = min(perm_betas_clean, na.rm = TRUE),
+           y = Inf,
+           hjust = 0,
+           vjust = 2,
+           label = paste0(
+             "Mean = ", round(mean_perm_betas, 3),
+             "\nSD = ", round(sd_perm_betas, 3)
+           )) +
+  
+  annotate("text",
+           x = max(perm_betas_clean, na.rm = TRUE),
+           y = 800,
+           hjust = 1,
+           vjust = 2,
+           label = paste0("p = ", round(p_value, 4))) +
+  
+  labs(
+    title = "P-value of Observed Opportunity Coefficient",
+    x = expression(beta[opportunity]),
+    y = "Frequency"
+  ) +
+  
+  theme_minimal()
+```
+
+A large $p$-value of 0.6752 is obtained from the simulation, indicating weak evidence of an overall hot-hand effect over the past 10 seasons for high-usage players. The observed opportunity coefficient is consistent with what would be expected under the assumption of independence.
+
+As expected, we also observe increasingly negative coefficients as shots are taken further from the basket. The mid-range and three-point indicators both show substantial decreases relative to close-range shots, reflecting the increase in shot difficulty with distance. The interaction between opportunity and distance is also negative for both mid-range and three-point shots, indicating that the impact of an opportunity shot decreases as shot distance increases.
+
+The player-level random intercept yields a relatively large standard deviation, representing the substantial heterogeneity in baseline shooting ability across players. This is expected in basketball data, as skillsets vary drastically across players and contribute to different baseline shooting percentages. In contrast, the standard deviation of random slopes for the opportunity indicator is extremely small, suggesting that the opportunity effect is relatively consistent across players. The season-level random intercept is non-negligible, indicating that the baseline shooting ability varies across seasons. This could reflect changes in offensive strategy, shooting ability, or other contextual factors that could impact shooting efficiency from year to year. 
 
 # Conclusion
 
@@ -1133,9 +1322,13 @@ Within-game shot sequences also present a challenge for detecting hot-hand patte
 
 Additional limitations arise from modeling assumptions and measurement choices. The hierarchical model assumes independence between shots, which is partially addressed through the inclusion of the opportunity variable. However, the opportunity variables does not fully capture within-game dynamics that may induce dependence of shots. Furthermore, defining an opportunity as three consecutive made shots serves only as a proxy for a “hot” state and may not fully reflect the underlying hot-hand effect. 
 
+The bias-adjustment procedure in the hierarchical analysis used a sample of 100 games to determine a null distribution of beta coefficients for the opportunity effect. While this procedure simulates independent shot sequences, the resulting null distribution is specific to the 100 randomly sampled games and may not fully capture the variability present in the complete dataset. As a result, the estimated bias adjustment may be sensitive to the particular sample of games selected, potentially limiting the generalizability of the findings.
+
 ## Future Work
 
 Additional analyses can be implemented to address the limitations presented above. Using a larger sample of players would allow for greater generalization to the NBA as a whole rather than only high-volume players. Incorporating additional variables, such as time between shots, defensive pressure, and game situation would help to further isolate the hot-hand effect and distinguish it from general shot streakiness. The permutation test and hierarchical model in this analysis employed a streak length of 3, which limits the frequency of opportunities. Shortening the streak length (e.g., $k$ = 1) would increase the number of opportunities within a shot sequence and, therefore, statistical power, but could weaken the contextual interpretation of an opportunity as representing a genuinely “hot” state. Future research could also extend this analysis to incorporate temporal dependence and a deeper examination of what constitutes a “hot” state. 
+
+Increasing the number of sampled games would improve the bias adjustment for the hierarchical model coefficient by providing a more stable estimate of the null opportunity coefficients. Future analyses can look to construct hierarchical models on an individual player level to account for the variation between players. The bias adjustment would then pertain to specific players rather than the sample as a whole.
 
 ## Computational Details
 
@@ -1153,6 +1346,13 @@ https://CRAN.R-project.org/.
 <!-- Store original definitions formatting -->
 \let\oldclearpage\clearpage
 \let\oldcleardoublepage\cleardoublepage
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/AppendixNullStats.png}
+\caption{Observed and Null Statistics for Stratified Games.}
+\label{fig:null-stats-stratified}
+\end{figure}
 
 <!-- Disable page breaks -->
 \let\clearpage\relax
