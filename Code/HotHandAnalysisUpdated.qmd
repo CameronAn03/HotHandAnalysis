@@ -770,6 +770,16 @@ game_opportunities_all <- mget(obj_names) %>%
   select(-source)
 ```
 
+```{r}
+# adding number of average number of shots to game_opportunities_all
+
+game_opportunities_all <- game_opportunities_all |>
+  inner_join(all_games_analysis, 
+            by = c("athlete_id_1", "game_id")) #|>
+  #select(player, athlete_id_1, game_id, n_opportunities, n_opportunity_makes, total_shots, total_makes)
+```
+
+
 
 Distribution of Hot Hand Opportunities by Season:
 
@@ -784,6 +794,7 @@ season_summary_opportunities <- game_opportunities_all %>%
     .groups = "drop"
   )
 ```
+
 
 League-Average Hot-Hand Opportunities per Game by Season
 
@@ -872,11 +883,11 @@ ggplot(season_summary_opportunities, aes(x = season_end, y = diff)) +
   geom_hline(yintercept = 0, linetype = "dotted") +
   geom_point(size = 2) +
   geom_line(alpha = 0.4) +
-  geom_smooth(method = "loess", se = T) +
+  geom_smooth(method = "loess", se = F) +
   scale_y_continuous(labels = scales::percent_format(accuracy = 0.1)) +
   labs(
-    title = "Hot-Hand Advantage Over Baseline by Season",
-    x = "Season (End Year)",
+    title = "Difference Between Opportunity and Baseline FG% by Season",
+    x = "Season",
     y = "Hot-hand FG% − Baseline FG%"
   ) +
   theme_minimal() +
@@ -1090,7 +1101,8 @@ p_values <- seq(0.4, 0.6, by = 0.05)
 n_values <- seq(5, 50, by = 1)
 k_values <- 3
 
-results <- expand.grid(n = n_values, p = p_values) %>%
+set.seed(123)
+mcmc_results <- expand.grid(n = n_values, p = p_values) %>%
   rowwise() %>%
   mutate(
     expected_value = simulate_expectation(n, k_values, p)
@@ -1099,7 +1111,7 @@ results <- expand.grid(n = n_values, p = p_values) %>%
 ```
 
 ```{r}
-ggplot(results, aes(x = n, y = expected_value, color = factor(sprintf("%.2f", p)))) +
+ggplot(mcmc_results, aes(x = n, y = expected_value, color = factor(sprintf("%.2f", p)))) +
   geom_line(linewidth = 1.2) +
   geom_hline(yintercept = 0, linetype = "dashed") +
   labs(
@@ -1114,7 +1126,8 @@ ggplot(results, aes(x = n, y = expected_value, color = factor(sprintf("%.2f", p)
     plot.title = element_text(hjust = 0.5, face = "bold"),
     plot.subtitle = element_text(hjust = 0.5),
     legend.position = "right"
-  )
+  ) +
+  guides(color = guide_legend(reverse = TRUE))
 ```
 
 ```{r}
@@ -1193,7 +1206,7 @@ stratified_sample %>%
   kable(
     format = "html",
     caption = "<div style='text-align:center; font-size:18px; font-weight:bold; color:black'>
-    Table _: Observed and Permutation Statistics for Games with Short Sequences (n = 10-20)</div>",
+    Observed and Permutation Statistics for Stratified Games Based on Number of Shots",
     digits = 6,
     align = 'c'
   ) %>%
@@ -2226,7 +2239,7 @@ perm_betas_clean <- perm_betas[is.finite(perm_betas)]
 mean_perm_beta <- mean(perm_betas_clean)
 sd_perm_beta <- sd(perm_betas_clean)
 
-obs_beta
+#obs_beta
 mean_perm_beta
 sd_perm_beta
 
@@ -2856,7 +2869,7 @@ appendix_table_top30 %>%
   kable(
     format = "html",
     caption = "<div style='text-align:center; font-size:18px; font-weight:bold; color:black'>
-    Top 30 Player–Seasons with Largest Degree of Hot Hand using k = 3 (sorted by p-value of the permuation test)</div>",
+    Top 30 Player–Seasons with Largest Degree of Hot Hand (sorted by p-value of the permuation test)</div>",
     digits = 6,
     align = 'c'
   ) %>%
