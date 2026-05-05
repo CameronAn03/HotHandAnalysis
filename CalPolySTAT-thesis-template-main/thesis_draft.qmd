@@ -433,9 +433,7 @@ Each observation in this sample consists of an individual player’s sequential 
 
 The permutation test is applied to each of these season-long sequences, allowing for the evaluation of streak behavior over a larger sample of shots per player. Using season-long shot data allows for greater statistical power due to the large number of opportunities within a given sequence. With more qualifying observations, estimates of conditional shooting probabilities become more stable and less sensitive to random variation, increasing the ability to detect meaningful deviations from the null hypothesis. It also offers a unique perspective on hot-hand shooting, with results applying to prolonged stretches of time rather than only individual games. Significant results for season-long data could indicate a potential carry-over effect, with players experiencing increased levels of play across multiple games given that the player finished the previous game on a streak.
 
-Figure __ (full results for all player-seasons provided in Appendix) displays the permutation test results for the 30 player-seasons exhibiting the strongest evidence of a hot-hand effect.
-
-(**TABLE IN APPENDIX**)
+Appendix A displays the permutation test results for the 30 player-seasons exhibiting the strongest evidence of a hot-hand effect.
 
 At an α = .05 individual significance level, only 10 out of 500 player-seasons exhibit a statistically discernible hot-hand effect. However, when conducting 500 independent hypothesis tests, we would expect approximately $0.5 * 500 = 25$ false rejections purely by chance, even if no true hot-hand effect exists. Thus, the observed number of significant results is lower than what we would expect under the null hypothesis of independence. Figure 4.1 below displays the distribution of p-values for the 500 player-seasons. The distribution is skewed left, with many observations possessing p-values greater than 0.05.
 
@@ -543,7 +541,49 @@ Prior work has shown that the magnitude of small-sample bias decreases as sample
 
 A Monte Carlo simulation was used to approximate the expected value of the streak statistic *Difference in proportion of S (opportunities – non-opportunities)* under different sequence lengths and success probabilities. A streak length of three was used for the simulation. The estimation procedure is summarized in Algorithm 1.
 
-**INSERT ALGORITHM HERE**
+\begin{algorithm}[H]
+\caption{MCMC for Expected Value of Streak Statistic}
+\begin{algorithmic}[1]
+
+\State \textbf{Input:} Sequence lengths $n \in \{5, 6, \dots, 50\}$, streak length $k = 3$, probability $p \in \{0.40, 0.45, 0.50, 0.55, 0.60\}$, number of simulations $M$
+\State \textbf{Output:} Expected value $\mathbb{E}[\hat{p}_{\text{opportunity}} - \hat{p}_{\text{others}}]$ for each $(n, p)$\\
+
+\For{each $n$}
+  \For{each $p$}
+    \State Initialize list $T = \emptyset$
+    
+    \For{$j = 1$ to $M$}
+        \State Generate $X_1, X_2, \dots, X_n \sim \text{i.i.d. Bernoulli}(p)$
+        
+        \State $S \gets \emptyset$ \Comment{indices of streak-following shots}
+        
+        \For{$i = k+1$ to $n$}
+            \If{$X_{i-k} = X_{i-k+1} = \cdots = X_{i-1} = 1$}
+                \State $S \gets S \cup \{i\}$
+            \EndIf
+        \EndFor
+        
+        \If{$S = \emptyset$ \textbf{or} $S^c = \emptyset$}
+            \State \textbf{continue}
+        \EndIf
+        
+        \State $\hat{p}_{\text{opportunity}} \gets \frac{1}{|S|} \sum_{i \in S} X_i$
+        \State $\hat{p}_{\text{others}} \gets \frac{1}{|S^c|} \sum_{i \notin S} X_i$
+        
+        \State $T_j \gets \hat{p}_{\text{opportunity}} - \hat{p}_{\text{others}}$
+        
+        \State $T \gets T \cup \{T_j\}$
+        
+    \EndFor
+    
+    \State $\text{ExpectedValue}(n, p) \gets \frac{1}{|T|} \sum T$
+  \EndFor
+\EndFor
+
+\State \textbf{Return:} $\{\text{ExpectedValue}(n, p)\}$
+
+\end{algorithmic}
+\end{algorithm}
 
 Figure 4.4 below displays the expected value of the streak statistic using Monte Carlo simulation. The parameter $p$ varies from 0.40 to 0.60, in increments of 0.05, reflecting plausible shooting proportions observed in game settings, although more extreme values exist due to small sample sizes. The overall sample proportion of made shots across all 35,428 qualified games was approximately 0.467. For each $(n, p)$ pair, the simulation was conducted using 10,000 trials and the resulting expected values are presented in the figure below.
 
@@ -584,7 +624,7 @@ These results can be compared to the null statistics of each observed shot seque
 
 ## Bias-Adjusted Streak Statistic
 
-The permutation test was run for all shot sequences in the sample. Sequences with zero opportunities were assigned a $p$-value of *NA*. Table __ in the Appendix contains a sample of 30 games and the collected statistics through the permutation tests. To visualize the effect of different sample sizes on the null distribution, three games of different sample sizes were collected. The three selected games contained 13, 16, and 20 shots to represent Q1, the median, and Q3, respectively. Each game had a streak statistic of -0.5 for consistency. The observed and null statistics are shown in Table 4.2 below.
+The permutation test was run for all shot sequences in the sample. Sequences with zero opportunities were assigned a $p$-value of *NA*. Appendix B contains a sample of 30 games, stratified based on the number of total shots, and the collected statistics through the permutation tests. To visualize the effect of different sample sizes on the null distribution, three games of different sample sizes were collected. The three selected games contained 13, 16, and 20 shots to represent Q1, the median, and Q3, respectively. Each game had a streak statistic of -0.5 for consistency. The observed and null statistics are shown in Table 4.2 below.
 
 
 ```{r}
@@ -1086,12 +1126,18 @@ Due to this phenomenon, a new model that includes shot distance as a variable wo
 A logistic hierarchical model was constructed to evaluate the probability of a successful shot based on specific in-game variables and random effects. The variables and random effects are outlined in Table 5.3.
 
 \begin{align*}
-\text{logit}(y_{ijk}) &= \beta_0 + \beta_1 \, opportunity_{ij} + u_{0j} + u_{1j} \, opportunity_{ij} + \epsilon_{ij} \\
+\text{logit}(p_{ijk}) &= \beta_0 
++ \beta_1 \,\text{opportunity}_{ijk} 
++ \beta_2 \,\text{midrange}_{ijk} 
++ \beta_3 \,\text{threepoint}_{ijk} \\
+&\quad + \beta_4 \,(\text{opportunity}_{ijk} \times \text{midrange}_{ijk})
++ \beta_5 \,(\text{opportunity}_{ijk} \times \text{threepoint}_{ijk}) \\
+&\quad + u_{0j} + v_{0k} + u_{1j}\,\text{opportunity}_{ijk} \\
+\\
 u_{0j} &\sim \mathcal{N}(0, \sigma^2_{u0}) \\
 u_{1j} &\sim \mathcal{N}(0, \sigma^2_{u1}) \\
-\epsilon_{ij} &\sim \mathcal{N}(0, \sigma^2)
+v_{0k} &\sim \mathcal{N}(0, \sigma^2_{v0})
 \end{align*}
-
 
 ```{r}
 #| label: hierarchical-model-variable-descriptions-table
@@ -1100,21 +1146,24 @@ u_{1j} &\sim \mathcal{N}(0, \sigma^2_{u1}) \\
 #| warning: false
 
 var_table <- data.frame(
-  Variable = c("make", "intercept", "is_opportunity", "dist_category", "is_opportunity*dist_category",
-               "(1 | player)", "(is_opportunity | player)",
-               "(1 | player)"),
+  Variable = c("make", "intercept", "is_opportunity", "Midrange", "ThreePoint", "is_opportunity:Midrange",
+               "is_opportunity:ThreePoint", "Player", "is_opportunity by Player", "Season"),
   Description = c(
-    "Baseline shot distance",
     "Indicator for whether a shot was made (1 = make, 0 = miss)",
-    "Indicator for opportunity shot (1 = yes, 0 = no)",
-    "Categorical shot distance (Close, Mid-range, Three-Pointer)",
-    "Interaction between is_opportunity and dist_category",
+    "Baseline shot distance",
+    "Opportunity Shot Indicator (1 = yes, 0 = no)",
+    "Midrange Shot Indicator (1 = yes, 0 = no)",
+    "Three Point Shot Indicator (1 = yes, 0 = no)",
+    "Interaction between is_opportunity and Midrange",
+    "Interaction between is_opportunity and ThreePoint",
     "Player-specific intercept",
     "Player-specific opportunity effect",
     "Season-specific intercept"
   ),
   `Effect Type` = c("Response", 
                     "Fixed", 
+                    "Fixed",
+                    "Fixed",
                     "Fixed",
                     "Fixed",
                     "Fixed",
@@ -1125,9 +1174,10 @@ var_table <- data.frame(
 
 kable(var_table, booktabs = TRUE, 
       col.names = c("Variable", "Description", "Effect Type"),
-      escape = T) %>%
-  kable_styling(latex_options = c("hold_position"),
-                full_width = F)
+      caption = "Baseline category for shot distance is 'close'.",
+      escape = T) #%>%
+  #kable_styling(latex_options = c("hold_position"),
+  #              full_width = F)
 ```
 
 Hot-hand theory posits that the probability of a successful shot increases on opportunity shots compared to non-opportunity shots, which many attribute to a positive coefficient for the opportunity variable. However, this coefficient is subject to the small-sample bias discovered by Miller and Sanjurjo, which must be accounted for. The inclusion of this variable allows us to assess how the probability of a successful shot varies with opportunity status while simultaneously accounting for other factors.
@@ -1214,10 +1264,10 @@ coef_table <- data.frame(
   Coefficient = c(
     "Intercept",
     "is_opportunity",
-    "dist_categoryMidrange",
-    "dist_categoryThreePoint",
-    "is_opportunity:dist_categoryMidrange",
-    "is_opportunity:dist_categoryThreePoint"
+    "Midrange",
+    "ThreePoint",
+    "is_opportunity:Midrange",
+    "is_opportunity:ThreePoint"
   ),
   Estimate = c(0.3207, 0.0634, -0.6126, -0.8927, -0.0826, -0.1224),
   `Std. Error` = c(0.0173, 0.0168, 0.0070, 0.0068, 0.0245, 0.0232),
@@ -1314,6 +1364,10 @@ The player-level random intercept yields a relatively large standard deviation, 
 
 # Conclusion
 
+## Summary
+
+The permutation tests for season-long shot sequences did not differ significantly from those expected under independence, offering little evidence of a hot-hand effect over the duration of a season despite possessing greater statistical power. Within-game shot sequences were also analyzed to examine the hot-hand effect on a more practical context, although with reduced statistical power due to smaller sample sizes. The within-game streak statistics did not differ significantly from those expected under independence, offering little evidence of a within-game hot-hand effect. Finally, a hierarchical model was constructed to evaluate the hot-hand effect while controlling for shot distance. Comparing the observed opportunity effect to null coefficients simulated under independence revealed that the opportunity effect does not differ significantly from those expected under independence, even after adjusting for shot distance. 
+
 ## Limitations
 
 Importantly, the results obtained from the permutation test are specific to the sample of players considered, which primarily consist of high-usage players who attempt a large number of shots for their respective teams. As such, these findings do not generalize to low-usage players, whose shot selection and opportunities may differ substantially. Additionally, the permutation testing framework does not account for contextual factors that may influence the perception or existence of a streak.
@@ -1347,14 +1401,19 @@ https://CRAN.R-project.org/.
 \let\oldclearpage\clearpage
 \let\oldcleardoublepage\cleardoublepage
 
-\begin{figure}[h!]
-\centering
-\includegraphics[width=0.8\textwidth]{figures/AppendixNullStats.png}
-\caption{Observed and Null Statistics for Stratified Games.}
-\label{fig:null-stats-stratified}
-\end{figure}
-
 <!-- Disable page breaks -->
 \let\clearpage\relax
 \let\cleardoublepage\relax
+
+#
+
+<!-- Restore original formatting -->
+\let\clearpage\oldclearpage
+\let\cleardoublepage\oldcleardoublepage
+
+![](Top30SeasonsRotated.png)
+
+#
+
+![](StratifiedGamesRotated.png)
 
