@@ -421,7 +421,7 @@ The steps of the procedure are outlined below:
 
 5. Calculate the proportion of permuted streak statistics that are at least as extreme as the observed statistic in the direction consistent with the hot-hand effect to obtain the *p*-value.
 
-This procedure addresses the bias identified in Gilovich, Vallone, & Tversky (1985) by directly constructing an appropriate null distribution from the observed shot sequence rather than relying on theoretical expectations under independence. The random permutation of observed outcomes satisfies the null assumption of independence, allowing us to compare the observed shot sequence to many sequences simulated under the null hypothesis. 
+This procedure addresses the bias identified in Gilovich, Vallone, & Tversky (1985) by directly constructing an appropriate null distribution from the observed shot sequence rather than relying on conventional assumptions under independence. The random permutation of observed outcomes satisfies the null assumption of independence, allowing us to compare the observed shot sequence to many sequences simulated under the null hypothesis. 
 
 ## Season-Level and Within-Game Shot Sequences
 
@@ -435,7 +435,7 @@ The permutation test is applied to each of these season-long sequences, allowing
 
 Appendix A displays the permutation test results for the 30 player-seasons exhibiting the strongest evidence of a hot-hand effect.
 
-At an α = .05 individual significance level, only 10 out of 500 player-seasons exhibit a statistically discernible hot-hand effect. However, when conducting 500 independent hypothesis tests, we would expect approximately $0.5 * 500 = 25$ false rejections purely by chance, even if no true hot-hand effect exists. Thus, the observed number of significant results is lower than what we would expect under the null hypothesis of independence. Figure 4.1 below displays the distribution of p-values for the 500 player-seasons. The distribution is skewed left, with many observations possessing p-values greater than 0.05.
+At an α = .05 individual significance level, only 10 out of 500 player-seasons exhibit a statistically discernible hot-hand effect. However, when conducting 500 independent hypothesis tests, we would expect approximately $0.05 * 500 = 25$ false rejections purely by chance, even if no true hot-hand effect exists. Thus, the observed number of significant results is lower than what we would expect under the null hypothesis of independence. Figure 4.1 below displays the distribution of p-values for the 500 player-seasons. The distribution is skewed left, with many observations possessing p-values greater than 0.05.
 
 ```{r}
 #| include: false
@@ -1125,60 +1125,87 @@ Due to this phenomenon, a new model that includes shot distance as a variable wo
 
 A logistic hierarchical model was constructed to evaluate the probability of a successful shot based on specific in-game variables and random effects. The variables and random effects are outlined in Table 5.3.
 
-\begin{align*}
-\text{logit}(p_{ijk}) &= \beta_0 
+Let $y_{ijk}$ denote the outcome of attempt $i$ by player $j$ in season $k$, where $y_{ijk} = 1$ if the attempt is made and $0$ otherwise. We model
+
+\begin{gather*}
+y_{ijk} \sim \text{Bernoulli}(p_{ijk})\\
+\\
+\text{logit}(p_{ijk}) = \beta_0 
 + \beta_1 \,\text{opportunity}_{ijk} 
 + \beta_2 \,\text{midrange}_{ijk} 
 + \beta_3 \,\text{threepoint}_{ijk} \\
-&\quad + \beta_4 \,(\text{opportunity}_{ijk} \times \text{midrange}_{ijk})
++ \beta_4 \,(\text{opportunity}_{ijk} \times \text{midrange}_{ijk})
 + \beta_5 \,(\text{opportunity}_{ijk} \times \text{threepoint}_{ijk}) \\
-&\quad + u_{0j} + v_{0k} + u_{1j}\,\text{opportunity}_{ijk} \\
++ u_{0j} + v_{0k} + u_{1j}\,\text{opportunity}_{ijk} \\
 \\
-u_{0j} &\sim \mathcal{N}(0, \sigma^2_{u0}) \\
-u_{1j} &\sim \mathcal{N}(0, \sigma^2_{u1}) \\
-v_{0k} &\sim \mathcal{N}(0, \sigma^2_{v0})
-\end{align*}
+u_{0j} \sim \mathcal{N}(0, \sigma^2_{u0}) \\
+u_{1j} \sim \mathcal{N}(0, \sigma^2_{u1}) \\
+v_{0k} \sim \mathcal{N}(0, \sigma^2_{v0})
+\end{gather*}
 
 ```{r}
-#| label: hierarchical-model-variable-descriptions-table
+#| label: hierarchical-model-variable-descriptions-with-terms-table
 #| echo: false
 #| tbl-cap: "Hierarchical Model Variable Descriptions."
 #| warning: false
 
 var_table <- data.frame(
-  Variable = c("make", "intercept", "is_opportunity", "Midrange", "ThreePoint", "is_opportunity:Midrange",
-               "is_opportunity:ThreePoint", "Player", "is_opportunity by Player", "Season"),
+  Variable = c("make", "intercept", "is_opportunity", "Midrange", "ThreePoint", 
+               "is_opportunity:Midrange",
+               "is_opportunity:ThreePoint", 
+               "Player", 
+               "is_opportunity by Player", 
+               "Season"),
+  
+  `Model Term` = c(
+    "$y_{ijk}$",
+    "$\\beta_0$",
+    "$\\beta_1 \\, \\text{opportunity}_{ijk}$",
+    "$\\beta_2 \\, \\text{midrange}_{ijk}$",
+    "$\\beta_3 \\, \\text{threepoint}_{ijk}$",
+    "$\\beta_4(\\text{opportunity}_{ijk} \\times \\text{midrange}_{ijk})$",
+    "$\\beta_5(\\text{opportunity}_{ijk} \\times \\text{threepoint}_{ijk})$",
+    "$u_{0j}$",
+    "$u_{1j}\\,\\text{opportunity}_{ijk}$",
+    "$v_{0k}$"
+  ),
+  
   Description = c(
     "Indicator for whether a shot was made (1 = make, 0 = miss)",
-    "Baseline shot distance",
-    "Opportunity Shot Indicator (1 = yes, 0 = no)",
-    "Midrange Shot Indicator (1 = yes, 0 = no)",
-    "Three Point Shot Indicator (1 = yes, 0 = no)",
-    "Interaction between is_opportunity and Midrange",
-    "Interaction between is_opportunity and ThreePoint",
+    "Baseline log-odds for the reference category",
+    "Opportunity shot indicator (1 = yes, 0 = no)",
+    "Midrange shot indicator (1 = yes, 0 = no)",
+    "Three point shot indicator (1 = yes, 0 = no)",
+    "Interaction between opportunity and midrange",
+    "Interaction between opportunity and three point",
     "Player-specific intercept",
     "Player-specific opportunity effect",
     "Season-specific intercept"
   ),
-  `Effect Type` = c("Response", 
-                    "Fixed", 
-                    "Fixed",
-                    "Fixed",
-                    "Fixed",
-                    "Fixed",
-                    "Fixed",
-                    "Random intercept",
-                    "Random slope",
-                    "Random intercept")
+  
+  `Effect Type` = c(
+    "Response", 
+    "Fixed", 
+    "Fixed",
+    "Fixed",
+    "Fixed",
+    "Fixed",
+    "Fixed",
+    "Random intercept",
+    "Random slope",
+    "Random intercept"
+  )
 )
 
-kable(var_table, booktabs = TRUE, 
-      col.names = c("Variable", "Description", "Effect Type"),
-      caption = "Baseline category for shot distance is 'close'.",
-      escape = T) #%>%
-  #kable_styling(latex_options = c("hold_position"),
-  #              full_width = F)
+kable(
+  var_table,
+  booktabs = TRUE,
+  escape = FALSE,
+  col.names = c("Variable", "Model Term", "Description", "Effect Type"),
+  caption = "Baseline category for shot distance is 'close'."
+)
 ```
+
 
 Hot-hand theory posits that the probability of a successful shot increases on opportunity shots compared to non-opportunity shots, which many attribute to a positive coefficient for the opportunity variable. However, this coefficient is subject to the small-sample bias discovered by Miller and Sanjurjo, which must be accounted for. The inclusion of this variable allows us to assess how the probability of a successful shot varies with opportunity status while simultaneously accounting for other factors.
 
@@ -1188,8 +1215,8 @@ Player and season random effects were also included in the hierarchical model to
 
 The opportunity coefficient is prone to the small-sample bias present in permutation testing. Therefore, the coefficient becomes inflated and overestimates the true effect of an opportunity shot on success probability. To account for this, a random sample of 100 games was selected from the full dataset. The following steps were taken to obtain a null distribution of opportunity coefficients from the sample:
 
-1. Randomly permute the shot sequences within the 100 sampled player-games to simulate independent shots.
-2. Fit the logistic hierarchical model for the simulated data to obtain a null opportunity coefficient.
+1. Randomly permute the shot sequences within the 100 sampled player-games to simulate independent shots. All variables pertaining to each shot should be held constant, with only the order of shots being permuted.
+2. Fit the logistic hierarchical model for the reordered data to obtain a null opportunity coefficient.
 3. Repeat steps 1-2 many times (e.g., 10,000 trials) to obtain a null distribution of opportunity coefficients.
 4. Calculate the mean of the null distribution to obtain the opportunity coefficient expected under independence.
 
