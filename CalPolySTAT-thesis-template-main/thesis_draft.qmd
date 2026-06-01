@@ -549,12 +549,12 @@ The limited sample size of each shot vector restrains the number of opportunity 
 
 Prior work has shown that the magnitude of small-sample bias decreases as sample size increases (Miller & Sanjurjo, 2018). Thus, the magnitude of bias for the season-long data is minimal and has little effect on the observed streak statistic. In contrast, the limited sample size of shot sequences in the within-game analysis warrant a closer examination of this bias. Because the magnitude of the bias is not immediately clear, a simulation-based approach was used to quantify its impact under realistic conditions for the within-game analysis. 
 
-## MCMC Simulation
+## Monte Carlo Simulation
 
 A Monte Carlo simulation was used to approximate the expected value of the streak statistic *Difference in proportion of S (opportunities – non-opportunities)* under different sequence lengths and success probabilities. A streak length of three was used for the simulation. The estimation procedure is summarized in Algorithm 1.
 
 \begin{algorithm}[H]
-\caption{MCMC for Expected Value of Streak Statistic}
+\caption{Monte Carlo Simulation for Expected Value of Streak Statistic}
 \begin{algorithmic}[1]
 
 \State \textbf{Input:} Sequence lengths $n \in \{5, 6, \dots, 50\}$, streak length $k = 3$, probability $p \in \{0.40, 0.45, 0.50, 0.55, 0.60\}$, number of simulations $M$
@@ -608,7 +608,7 @@ mcmc_results <- read.csv(here::here("Data", "mcmc_results.csv"))
 ```{r}
 #| label: mcmc-figure
 #| echo: false
-#| fig-cap: "Simulated Value of Streak Statisic under Independence (k = 3)"
+#| fig-cap: "Simulated Value of Streak Statistic under Independence (k = 3)"
 #| message: false
 
 ggplot(mcmc_results, aes(x = n, y = expected_value, color = factor(sprintf("%.2f", p)))) +
@@ -1414,7 +1414,7 @@ Importantly, the results obtained from the permutation test are specific to the 
 
 Within-game shot sequences also present a challenge for detecting hot-hand patterns due to limited sample sizes. The average number of shots per game for players in the sample was approximately 16, resulting in relatively few opportunity shots and, consequently, low statistical power. Considering season-long shot sequences increases the power of detecting a hot-hand by increasing sample sizes and increasing the number of opportunities. However, the results lose practical interpretability, as the hot-hand effect is generally understood to occur within games rather than across extended periods.
 
-Additional limitations arise from modeling assumptions and measurement choices. The hierarchical model assumes independence between shots, which is partially addressed through the inclusion of the opportunity variable. However, the opportunity variable does not fully capture within-game dynamics that may induce dependence of shots. Furthermore, defining an opportunity as three consecutive made shots serves only as a proxy for a “hot” state and may not fully reflect the underlying hot-hand effect. 
+Additional limitations arise from modeling assumptions and measurement choices. The hierarchical model assumes independence between shots, which is partially addressed through the inclusion of the opportunity variable. However, although the opportunity variable accounts for some variation associated with shot order, it may not fully capture within-game dynamics that create dependent shot outcomes. Furthermore, defining an opportunity as three consecutive made shots serves only as a proxy for a “hot” state and may not fully reflect the underlying hot-hand effect. 
 
 The bias-adjustment procedure in the hierarchical analysis used a sample of 100 games to determine a null distribution of beta coefficients for the opportunity effect. While this procedure simulates independent shot sequences, the resulting null distribution is specific to the 100 randomly sampled games and may not fully capture the variability present in the complete dataset. As a result, the estimated bias adjustment may be sensitive to the particular sample of games selected, potentially limiting the generalizability of the findings.
 
