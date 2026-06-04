@@ -2369,13 +2369,16 @@ game_results <- map_dfr(games_individual, function(dat_game) {
 ```
 
 ```{r}
+# filtering out games with 0 opportunities
 game_results_clean <- game_results %>%
   filter(!is.na(p_value))
 ```
 
 ```{r}
+# histogram of p-values
 hist(game_results_clean$p_value)
 
+# QQPlot of p-values
 qqplot(
   ppoints(nrow(game_results_clean)),
   sort(game_results_clean$p_value)
