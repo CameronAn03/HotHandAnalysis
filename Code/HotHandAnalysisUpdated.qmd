@@ -2272,6 +2272,122 @@ table(dat_perm$is_opportunity)
 table(dat_perm$is_opportunity, dat_perm$dist_category)
 ```
 
+### Individual Player-Game Logistic Analysis
+
+```{r}
+# calculating observed beta for inputted game
+get_game_beta <- function(dat_game) {
+
+  fit <- tryCatch(
+    glm(
+      make ~ is_opportunity * dist_category,
+      data = dat_game,
+      family = binomial
+    ),
+    error = function(e) NULL
+  )
+
+  if (is.null(fit)) return(NA_real_)
+
+  beta <- coef(fit)["is_opportunity"]
+
+  if (is.na(beta) || !is.finite(beta))
+    return(NA_real_)
+
+  unname(beta)
+}
+```
+
+```{r}
+# randomly permuting shots for inputted game and calculating beta_opportunity
+permute_game_beta <- function(dat_game) {
+
+  dat_perm <- dat_game %>%
+    slice_sample(prop = 1) %>%
+    mutate(shot_number_perm = row_number()) %>%
+    arrange(shot_number_perm) %>%
+    mutate(
+      lag1 = lag(make, 1, default = 0),
+      lag2 = lag(make, 2, default = 0),
+      lag3 = lag(make, 3, default = 0),
+      is_opportunity = as.integer(
+        lag1 == 1 &
+        lag2 == 1 &
+        lag3 == 1
+      )
+    )
+
+  fit <- tryCatch(
+    glm(
+      make ~ is_opportunity * dist_category,
+      data = dat_perm,
+      family = binomial
+    ),
+    error = function(e) NULL
+  )
+
+  if (is.null(fit)) return(NA_real_)
+
+  beta <- coef(fit)["is_opportunity"]
+
+  if (is.na(beta) || !is.finite(beta))
+    return(NA_real_)
+
+  unname(beta)
+}
+```
+
+```{r}
+# splitting games up by game_id and player
+games_individual <- sample_games %>%
+  group_by(game_id, player) %>%
+  group_split()
+```
+
+```{r}
+# calculating p-value for each observed shot sequence in my sample
+game_results <- map_dfr(games_individual, function(dat_game) {
+
+  obs_beta <- get_game_beta(dat_game)
+
+  perm_betas <- replicate(
+    1000,
+    permute_game_beta(dat_game)
+  )
+
+  perm_betas <- perm_betas[is.finite(perm_betas)]
+
+  tibble(
+    game_id = first(dat_game$game_id),
+    player = first(dat_game$player),
+    obs_beta = obs_beta,
+    null_mean = mean(perm_betas),
+    null_sd = sd(perm_betas),
+    p_value = mean(perm_betas >= obs_beta)
+  )
+})
+```
+
+```{r}
+game_results_clean <- game_results %>%
+  filter(!is.na(p_value))
+```
+
+```{r}
+hist(game_results_clean$p_value)
+
+qqplot(
+  ppoints(nrow(game_results_clean)),
+  sort(game_results_clean$p_value)
+)
+abline(0, 1)
+```
+
+```{r}
+mean(game_results_clean$p_value < 0.05)
+```
+
+
 #### Extreme Games Analysis
 
 ```{r}
