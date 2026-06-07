@@ -62,7 +62,7 @@ The findings in this paper contributed to the characterization of the hot hand a
 
 However, recent research has revisited the validity of the methods used in Gilovich, Vallone, and Tversky (1985). In particular, Miller and Sanjurjo (2018) identified a flaw in the conditional proportion analysis used in the 1985 paper. The flaw stems from a systematic bias in the analysis of conditional shooting proportions within finite shot sequences, which ultimately resulted in an underestimation of the true hot-hand effect. Miller & Sanjurjo (2018) formally demonstrated the downward bias in conditional proportion estimators by analyzing all possible permutations of short finite sequences of independent binary outcomes. In their example using three consecutive coin flips, they examine the proportion of heads following a previous head under the assumption of independence. A calculation of the conditional proportion estimator revealed that the expected proportion of heads conditioned on a previous head is equal to $\frac{5}{12}$, notably lower than the suspected 0.5, illustrating the systematic downward bias introduced by conditioning on finite sequences [@miller_surprised_2018].
 
-Miller and Sanjurjo applied the coin-flipping framework to demonstrate bias in the methodology of Gilovich, Vallone, and Tversky (1985), whereby the conditional proportions systematically underestimated the true hot hand effect of the data. Coin flips that resulted in heads were treated as made shots, while coin flips that resulted in tails were treated as missed shots. Applying the same logic to a basketball context, Miller and Sanjurjo reasoned that finite samples of shot data exhibited the same bias observed in the coin problem. More specifically, the expected proportion of made shots conditioned on a previous make was not equal to the player’s overall shooting proportion, but instead was biased downwards due to the structure of the sampling process. To fix this issue, Miller and Sanjurjo utilized a permutation test, described in detail in Section 4.1. After accounting for the downward bias in conditional proportions with the permutation test, Miller and Sanjurjo discovered a reversal of Gilovich’s findings, indicating a discernible hot-hand effect for the given data.
+Miller and Sanjurjo applied the coin-flipping framework to demonstrate bias in the methodology of Gilovich, Vallone, and Tversky (1985), whereby the conditional proportions systematically underestimated the true hot hand effect of the data. Coin flips that resulted in heads were treated as made shots, while coin flips that resulted in tails were treated as missed shots. Applying the same logic to a basketball context, Miller and Sanjurjo reasoned that finite samples of shot data exhibited the same bias observed in the coin problem. More specifically, the expected proportion of made shots conditioned on a previous make was not equal to the player’s overall shooting proportion, but instead was biased downwards due to the structure of the sampling process. To fix this issue, Miller and Sanjurjo utilized a permutation test, described in detail in Section 3.1. After accounting for the downward bias in conditional proportions with the permutation test, Miller and Sanjurjo discovered a reversal of Gilovich’s findings, indicating a discernible hot-hand effect for the given data.
 
 ## Contextual Variation in Hot-Hand Evidence
 
@@ -86,9 +86,9 @@ The NBA has undergone notable changes in offensive philosophy from past eras, wi
 
 ## Modern NBA Trends
 
-All data and figures presented in this section are derived from publicly available NBA statistics obtained from Basketball Reference [@basketball_reference]. 
+All data used in this section were obtained from publicly available NBA statistics obtained from Basketball Reference [@basketball_reference]. 
 
-The most notable example of the evolution of offensive strategy is Stephen Curry’s 2015-16 unanimous MVP season, in which he attempted a then-record 886 three-pointers. Figure 2.1 below displays an increasing trend in the percentage of total field goal attempts (FGA) that were three-point attempts (3PA) after the 2015-16 regular season. The season variable is encoded as the ending year of each NBA season (e.g., 2016 corresponds to the 2015-16 season).
+The most notable example of the evolution of offensive strategy is Stephen Curry’s 2015-16 unanimous MVP season, in which he attempted a then-record 886 three-pointers. Figure 2.1 below displays an increasing trend in the percentage of total field goal attempts (FGA) that were three-point attempts (3PA) after the 2015-16 regular season. Field goal attempts are defined as "any live-ball throw, shot, or tap---including layups and dunks---directed at a player's own basket to score, excluding free throws" [@nba_rulebook]. The season variable is encoded as the ending year of each NBA season (e.g., 2016 corresponds to the 2015-16 season).
 
 ```{r}
 #| include: false
@@ -157,7 +157,7 @@ ggplot(SeasonAvgs, aes(x = season_end, y = Pace)) +
 
 The fluctuations in pace since 2016 may suggest changes in streak-shooting tendencies over time, as players attempt more shots per game and therefore have more opportunities to develop scoring streaks.
 
-Figure 2.3 displays the league-average field goal attempts (FGA) per game at the team level increasing at a commensurate rate to the pace of play from approximately the 2015-16 to the 2019-20 regular season. Field goal attempts are defined as "any live-ball throw, shot, or tap---including layups and dunks---directed at a player's own basket to score, excluding free throws" [@nba_rulebook].
+Figure 2.3 displays the league-average field goal attempts (FGA) per game at the team level increasing at a commensurate rate to the pace of play from approximately the 2015-16 to the 2019-20 regular season.
 
 ```{r}
 #| label: FGA-per-game-figure
@@ -365,7 +365,7 @@ ggplot(season_summary_opportunities_diff, aes(x = season_end, y = diff)) +
 
 ```
 
-The overall difference seems to fluctuate around zero, with most seasons possessing a slight negative difference, indicating that the success rate on opportunity shots is less than the success rate for baseline attempts on average. While there are isolated seasons, such as 2018-19 and 2023-24, in which hot-hand FG% is greater than the baseline FG%, these deviations are neither persistent nor large in magnitude. These results do not provide any preliminary evidence that a systematic hot hand effect exists on the aggregate level. It is important to note that this analysis remains subject to the selection bias identified by Miller and Sanjurjo, as the hot-hand FG% is computed by conditioning on prior shot outcomes. Therefore, more rigorous and detailed analysis methods that account for this bias are needed before any conclusions can be made regarding the hot-hand effect.
+The overall difference seems to fluctuate around zero, with most seasons possessing a slight negative difference, indicating that the success rate on opportunity shots is less than the success rate for baseline attempts on average. While there are isolated seasons, such as 2018-19 and 2023-24, in which hot-hand FG% is greater than the baseline FG%, these deviations are neither persistent nor large in magnitude. These results do not provide any preliminary evidence that a systematic hot-hand effect exists on the aggregate level. It is important to note that this analysis remains subject to the selection bias identified by Miller and Sanjurjo, as the hot-hand FG% is computed by conditioning on prior shot outcomes. Therefore, more rigorous and detailed analysis methods that account for this bias are needed before any conclusions can be made regarding the hot-hand effect.
 
 The distance of each shot attempt was collected using hoopR’s coordinate system, with each shot containing an x and y-coordinate relative to the basket. Shot distances were then organized into one of three categories: close range (0-8 feet), mid-range (8-22 feet), and three-pointer (22+ feet). These category labels are approximate, as the distance of a three-point attempt varies depending on court location. For example, corner three-point attempts are taken from approximately 22 feet, whereas three-point attempts taken from the top of the arc must be at least 23.75 feet. The chosen cutoff values reflect the empirical distribution of shot distances, which tend to cluster in specific regions. Figure 2.9 below displays the distribution of shot distances for all games within the 500 qualified player-seasons, with vertical lines marked at cutoff values of 8 and 22 feet. 
 
@@ -480,11 +480,11 @@ The permutation testing procedure was applied to season-long shot sequences as w
 
 ### Season-Long Data
 
-Each observation in this sample consists of an individual player’s sequential shot data for a particular season. That is, for each of the 500 player-seasons, a binary sequence of makes and misses is constructed using all shots taken over the course of the season. Shots are carried over across games, meaning they accumulate over the course of a season without resetting after each game. As a result, streaks can extend across game boundaries. For instance, if a player makes the final two shots of one game and the first shot of the next game, the subsequent shot would be classified as an opportunity. Treating each game separately, as examined in the within-game analysis, effectively censors shot sequences at the end of each game by truncating potential streaks. This could potentially result in weaker evidence of a hot-hand effect by reducing the number of observed opportunity situations and inflating p-values. By allowing sequences to carry over across games, this analysis avoids inflating *p*-values and maximizes the statistical power under the given context.
+Each observation in this sample consists of an individual player’s sequential shot data for a particular season. That is, for each of the 500 player-seasons, a binary sequence of makes and misses is constructed using all shots taken over the course of the season. Shots are carried over across games, meaning they accumulate over the course of a season without resetting after each game. As a result, streaks can extend across game boundaries. For instance, if a player makes the final two shots of one game and the first shot of the next game, the subsequent shot would be classified as an opportunity. Treating each game separately, as examined in the within-game analysis, effectively censors shot sequences at the end of each game by truncating potential streaks. This could potentially result in weaker evidence of a hot-hand effect by reducing the number of observed opportunity situations and inflating *p*-values. By allowing sequences to carry over across games, this analysis avoids inflating *p*-values and maximizes the statistical power under the given context.
 
 The permutation test is applied to each of these season-long sequences, allowing for the evaluation of streak behavior over a larger sample of shots per player. Using season-long shot data allows for greater statistical power due to the large number of opportunities within a given sequence. With more qualifying observations, estimates of conditional shooting proportions become more stable and less sensitive to random variation, increasing the ability to detect meaningful deviations from the null hypothesis. It also offers a unique perspective on hot-hand shooting, with results applying to prolonged stretches of time rather than only individual games. Significant results for season-long data could indicate a potential carry-over effect, with players experiencing increased levels of play across multiple games given that the player finished the previous game on a streak.
 
-Appendix A displays the permutation test results for the 30 player-seasons exhibiting the strongest evidence of a hot-hand effect.
+Figure A.1 (Appendix A) displays the permutation test results for the 30 player-seasons exhibiting the strongest evidence of a hot-hand effect.
 
 At an α = .05 individual significance level, only 10 out of 500 player-seasons exhibit a statistically discernible hot-hand effect. However, when conducting 500 independent hypothesis tests, we would expect approximately $0.05 * 500 = 25$ false rejections purely by chance, even if no true hot-hand effect exists. Thus, the observed number of significant results is lower than what we would expect under the null hypothesis of independence. Figure 3.1 below displays the distribution of $p$-values for the 500 player-seasons. The distribution is skewed left, with many observations possessing $p$-values greater than 0.05.
 
@@ -523,7 +523,7 @@ qq_df <- data.frame(expected, observed)
 ```{r}
 #| label: p-value-qqplot-figure
 #| echo: false
-#| fig-cap: "Distribution of Permutation Test P-values compared to uniform distribution."
+#| fig-cap: "Distribution of Permutation Test P-values compared to Uniform Distribution."
 #| message: false
 
 ggplot(qq_df, aes(expected, observed)) +
@@ -539,7 +539,7 @@ ggplot(qq_df, aes(expected, observed)) +
 
 The QQ Plot (Figure 3.2) above compares the observed $p$-values from the permutation tests to the uniform distribution. Under the null assumption of independence, we expect the distribution of $p$-values to follow a uniform distribution, displayed by the diagonal line. The hot-hand effect suggests that the distribution of observed $p$-values should fall below the diagonal line since a larger proportion of player-seasons would be expected to show stronger evidence than under independence, resulting in lower quantiles. However, the observed $p$-values align above the diagonal line, which suggests that there is not only little evidence of a hot-hand effect, but also that players potentially perform slightly worse during opportunities than other shots. These results are aggregated at the player-season level, based on season-long shot sequences rather than game-level data. As a result, the analysis captures within-season patterns but may mask potential short-term dynamics. 
 
-To account for the false discovery rate of hot-hand effects, the Benjamini-Hochberg procedure was applied to the existing $p$-values. After this adjustment, none of the player-seasons remain statistically significant, providing no evidence of a hot-hand effect after correcting for multiple comparisons.  
+To account for the false discovery rate of hot-hand effects, a Benjamini-Hochberg adjustment was applied to the existing $p$-values. After this adjustment, none of the player-seasons remained statistically significant, providing little evidence of a hot-hand effect after correcting for multiple comparisons.  
 
 ### Game-Level Data
 
@@ -550,7 +550,7 @@ In total, 35,428 shot sequences were considered for the game-level analysis. The
 ```{r}
 #| label: num-shots-per-game-table
 #| echo: false
-#| tbl-cap: "Total Shots per Game per Player."
+#| tbl-cap: "Total FGA per Game per Player."
 
 all_games_analysis |>
   summarise(
@@ -568,7 +568,7 @@ all_games_analysis |>
 ```{r}
 #| label: total-shots-per-game-figure
 #| echo: false
-#| fig-cap: "Total Number of Shots per Game for Qualified Players."
+#| fig-cap: "Total FGA per Game for Qualified Players."
 #| message: false
 
 all_games_analysis |>
@@ -676,7 +676,7 @@ These results can be compared to the null statistics of each observed shot seque
 
 ## Bias-Adjusted Streak Statistic
 
-The permutation test was run for all shot sequences in the sample. Sequences with zero opportunities were assigned a $p$-value of *NA*. Appendix B contains a sample of 30 games, stratified based on the number of total shots, and the collected statistics through the permutation tests. To visualize the effect of different sample sizes on the null distribution, three games of different sample sizes were collected. The three selected games contained 13, 16, and 20 shots to represent Q1, the median, and Q3, respectively. Each game had a streak statistic of -0.5 for consistency. The observed and null statistics are shown in Table 3.2 below.
+The permutation test was run for all shot sequences in the sample. Sequences with zero opportunities were assigned a $p$-value of *NA*. Figure B.1 (Appendix B) contains a sample of 30 games, stratified based on the number of total shots, and the collected statistics through the permutation tests. To visualize the effect of different sample sizes on the null distribution, three games of different sample sizes were collected. The three selected games contained 13, 16, and 20 shots to represent Q1, the median, and Q3, respectively. Each game had a streak statistic of -0.5 for consistency. The observed and null statistics are shown in Table 3.2 below.
 
 
 ```{r}
@@ -702,7 +702,7 @@ As expected, the null means generally seem to decrease as the number of shots in
 
 Overall, only 562 out of 20,865 games (approximately 2.69%) that included at least one opportunity produced a statistically significant streak statistic at the α = 0.05 individual significance level. This proportion is lower than what would be expected under the assumption of independence, providing little evidence in support of a within-game hot-hand effect. Furthermore, the mean of the *Adjusted Difference in Proportions* column across all games with at least one opportunity was approximately -0.0136, indicating that, on average, players performed slightly worse on opportunity shots than would be expected under independence.
 
-Figure 3.5 provides the distributions of the bias-adjusted streak statistic by season. The distributions appear largely consistent across seasons, exhibiting similar bimodal shapes and comparable peak locations. In particular, each season shows two prominent peaks centered at approximately -0.25 and 0.25. The black points denote the seasonal means of the bias-adjusted streak statistic, which are generally centered slightly below zero. This aligns with the previous finding that players tend to perform marginally worse on opportunity shots relative to other shots after adjusting for the bias. One exception is the 2018-19 season in which the mean appears slightly above zero, suggesting a small, though likely negligible, positive hot-hand effect. The similarity between the distributions suggests little evidence of systematic seasonal differences in hot-hand effects.
+Figure 3.5 provides the distributions of the bias-adjusted streak statistic by season. The distributions appear largely consistent across seasons, exhibiting similar bimodal shapes and comparable peak locations. In particular, each season shows two prominent peaks centered at approximately -25% and 25%. The black points denote the seasonal means of the bias-adjusted streak statistic, which are generally centered slightly below zero. This aligns with the previous finding that players tend to perform marginally worse on opportunity shots relative to other shots after adjusting for the bias. One exception is the 2018-19 season in which the mean appears slightly above zero, suggesting a small, though likely negligible, positive hot-hand effect. The similarity between the distributions suggests little evidence of systematic seasonal differences in hot-hand effects.
 
 ```{r}
 #| label: null-adjusted-ridge-figure
@@ -928,12 +928,12 @@ ggplot(df_all, aes(x = stat)) +
 
 After adjusting for the null mean (approximately -0.23), these values shift to around -0.25 and 0.25, producing the observed peaks. This pattern reflects the high variability of the statistic rather than systematic differences across seasons, providing little evidence of a meaningful season-specific hot-hand effect. 
 
-To examine the results further, the games were categorized by the number of opportunities in their respective sequence in Table 3.3 and Figure 3.7A. The figure shows an overall negative relationship between the number of opportunities within a game and the number of games associated with the number of opportunities. This is expected because qualifying for opportunity shots is increasingly difficult as the number of opportunities increases. The *Proportion with Positive Adjusted Difference* column is plotted in Figure 3.7B and represents the proportion of games in which the bias-adjusted streak statistic was greater than 0, indicating a positive directional effect in favor of the hot hand.
+To examine the results further, the games were categorized by the number of opportunities in their respective sequence in Table 3.3 and Figure 3.7A. The figure shows an overall negative relationship between the number of opportunities within a game and the number of games associated with the number of opportunities. This is expected because qualifying for opportunity shots is increasingly difficult as the number of opportunities increases. The *Proportion (Adj. Diff. > 0)* column is plotted in Figure 3.7B and represents the proportion of games in which the bias-adjusted streak statistic was greater than 0, indicating a positive directional effect in favor of the hot hand.
 
 ```{r}
 #| label: adj-diff-by-opps-table
 #| echo: false
-#| tbl-cap: "Proportion of Games with Bias-Adjusted Difference in Proportions Greater than 0."
+#| tbl-cap: "Proportion of Games with Bias-Adjusted Difference Greater than 0."
 
 # calculating proportion of each 'n_opportunties' value in which adj_diff > 0
 opp_positive_prop <- all_games_analysis %>%
@@ -961,9 +961,9 @@ opp_positive_prop <- all_games_analysis %>%
   )
 
 opp_positive_prop |>
-  kable(col.names = c("Number of Opportunities", 
-                        "Number of Games", 
-                        "Proportion with Positive Adjusted Difference")) |>
+  kable(col.names = c("Opportunities", 
+                      "Games", 
+                        "Proportion (Adj. Diff. > 0)")) |>
   kable_styling(full_width = F)
 ```
 
@@ -1008,7 +1008,7 @@ p2 <- ggplot(
 p1 / p2
 ```
 
-The proportion of games with adjusted difference in proportions is undefined for games with exactly 0 or 14 opportunities since games with zero opportunities do not yield a streak statistic and zero games in the sample contain exactly 14 opportunities. Among games with at least one opportunity, those with only one opportunity comprise approximately (39.22%), representing the largest share across all opportunity counts. However, only about 4.3% of these games exhibit a positive null-adjusted difference in proportions, indicating minimal evidence of a hot-hand effect for single-opportunity games. 
+The proportion of games with a positive adjusted difference in proportions is undefined for games with exactly 0 or 14 opportunities since games with zero opportunities do not yield a streak statistic and zero games in the sample contain exactly 14 opportunities. Among games with at least one opportunity, those with only one opportunity comprise approximately (39.22%), representing the largest share across all opportunity counts. However, only about 4.3% of these games exhibit a positive null-adjusted difference in proportions, indicating minimal evidence of a hot-hand effect for single-opportunity games. 
 
 This result is consistent with the structural constraints of the shot sequence and qualifications of an opportunity shot. For a game to contain exactly one opportunity, the player must miss the lone opportunity shot. Otherwise, a made opportunity shot would generate an additional opportunity on the subsequent attempt. Consequently, the only scenario in which a positive adjusted streak statistic can occur in a one-opportunity game is when the lone opportunity arises at the end of the sequence, such as when the player makes the final four shots of the game with no prior opportunities. In this case, the final shot constitutes a successful opportunity while precluding the possibility of additional opportunities. Because this scenario occurs infrequently, the proportion of games with a positive adjusted streak statistic is correspondingly low, as reflected by the 4.3% figure. 
 
@@ -1297,11 +1297,11 @@ kable(
   var_table,
   booktabs = TRUE,
   escape = FALSE,
-  col.names = c("Variable", "Model Term", "Description", "Effect Type"),
-  caption = "Baseline category for shot distance is 'close'."
-)
+  col.names = c("Variable", "Model Term", "Description", "Effect Type")
+  )
 ```
 
+**Note**: The baseline category for shot distance is 'close'.
 
 Hot-hand theory posits that the probability of a successful shot increases on opportunity shots compared to non-opportunity shots, which many attribute to a positive coefficient for the opportunity variable. However, this coefficient is subject to the small-sample bias discovered by Miller and Sanjurjo, which must be accounted for. The inclusion of this variable allows us to assess how the probability of a successful shot varies with opportunity status while simultaneously accounting for other factors.
 
@@ -1370,7 +1370,7 @@ ggplot(data.frame(x = perm_betas_clean), aes(x = x)) +
   theme_minimal()
 ```
 
-The mean opportunity coefficient of the simulated trials under independence is approximately 0.13, suggesting the existence of a bias that overestimates the true hot-hand effect. We now compare these results to the coefficients obtained from the observed hierarchical model. The fixed coefficient estimates for the full data are listed in Table 5.4 and random effect coefficients are listed in Table 4.5. 
+The mean opportunity coefficient of the simulated trials under independence is approximately 0.13, suggesting the existence of a bias that overestimates the true hot-hand effect. We now compare these results to the coefficients obtained from the observed hierarchical model. The fixed coefficient estimates for the full data are listed in Table 4.4 and random effect coefficients are listed in Table 4.5. 
 
 ```{r}
 #| include: false
@@ -1395,12 +1395,12 @@ coef_table <- data.frame(
   Estimate = c(0.3207, 0.0634, -0.6126, -0.8927, -0.0826, -0.1224),
   `Std. Error` = c(0.0173, 0.0168, 0.0070, 0.0068, 0.0245, 0.0232),
   `z value` = c(18.5423, 3.7856, -87.1207, -130.3290, -3.3723, -5.2717),
-  `p-value` = c("0e+00", "2e-04", "0e+00", "0e+00", "7e-04", "0e+00")
+  `p-value` = c("<0.0001", "0.0002", "<0.0001", "<0.0001", "0.0007", "<0.0001")
 )
 
 kable(coef_table, booktabs = TRUE, align = "lrrrr",
-      col.names = c("Coefficient", "Estimate", "Std. Error", "z value*", "p-value*")) %>%
-  kable_styling(latex_options = c("hold_position"))
+      col.names = c("Coefficient", "Estimate", "Std. Error", "z value*", "p-value*")) #%>%
+  #kable_styling(latex_options = c("hold_position"))
 ```
 
 **Note**: The *z*-values and *p*-values for the fixed effect coefficients should be interpreted with caution as they are subject to the finite sampling bias described above.
@@ -1498,7 +1498,7 @@ Importantly, the results obtained from the permutation test are specific to the 
 
 Within-game shot sequences also present a challenge for detecting hot-hand patterns due to limited sample sizes. The average number of shots per game for players in the sample was approximately 16, resulting in relatively few opportunity shots and, consequently, low statistical power. Considering season-long shot sequences increases the power of detecting a hot-hand by increasing sample sizes and increasing the number of opportunities. However, the results lose practical interpretability, as the hot-hand effect is generally understood to occur within games rather than across extended periods.
 
-Additional limitations arise from modeling assumptions and measurement choices. The hierarchical model assumes independence between shots, which is partially addressed through the inclusion of the opportunity variable. However, although the opportunity variable accounts for some variation associated with shot order, it may not fully capture within-game dynamics that create dependent shot outcomes. Furthermore, defining an opportunity as three consecutive made shots serves only as a proxy for a “hot” state and may not fully reflect the underlying hot-hand effect. 
+Additional limitations arise from modeling assumptions and measurement choices. The hierarchical model assumes independence between shots, which is partially addressed through the inclusion of the opportunity variable. However, although the opportunity variable accounts for some variation associated with shot order, it may not fully capture within-game dynamics that create dependent shot outcomes. Furthermore, defining an opportunity as any shot occurring after three consecutive made shots serves only as a proxy for a “hot” state and may not fully reflect the underlying hot-hand effect. 
 
 The bias-adjustment procedure in the hierarchical analysis used a sample of 100 games to determine a null distribution of beta coefficients for the opportunity effect. While this procedure simulates independent shot sequences, the resulting null distribution is specific to the 100 randomly sampled games and may not fully capture the variability present in the complete dataset. As a result, the estimated bias adjustment may be sensitive to the particular sample of games selected, potentially limiting the generalizability of the findings.
 
@@ -1520,24 +1520,33 @@ https://CRAN.R-project.org/.
 :::
 
 \appendix
+\clearpage
 
-<!-- Store original definitions formatting -->
-\let\oldclearpage\clearpage
-\let\oldcleardoublepage\cleardoublepage
+#
 
-<!-- Disable page breaks -->
-\let\clearpage\relax
-\let\cleardoublepage\relax
+```{r}
+#| label: fig-top-30-seasons
+#| echo: false
+#| fig-cap: "Top 30 Player-Seasons with the Strongest Hot-Hand Effect."
+#| out-height: "0.82\\textheight"
+#| out-width: "auto"
+#| fig-align: "center"
 
-# Top 30 Player-Seasons with the Strongest Hot-Hand Effect.
+knitr::include_graphics("Top30SeasonsRotated.png")
+```
 
-<!-- Restore original formatting -->
-\let\clearpage\oldclearpage
-\let\cleardoublepage\oldcleardoublepage
+\clearpage
 
-![](Top30SeasonsRotated.png)
+#
 
-# Permutation Test Results for 30 Randomly Stratified Games.
+```{r}
+#| label: fig-stratified-games
+#| echo: false
+#| fig-cap: "Permutation Test Results for 30 Randomly Stratified Games."
+#| out-height: "0.82\\textheight"
+#| out-width: "auto"
+#| fig-align: "center"
 
-![](StratifiedGamesRotated.png)
+knitr::include_graphics("StratifiedGamesRotated.png")
+```
 
