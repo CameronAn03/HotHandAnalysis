@@ -1520,15 +1520,14 @@ https://CRAN.R-project.org/.
 :::
 
 \appendix
-\clearpage
 
-#
+# Top 30 Player-Seasons with the Strongest Hot-Hand Effect
 
 ```{r}
 #| label: fig-top-30-seasons
 #| echo: false
 #| fig-cap: "Top 30 Player-Seasons with the Strongest Hot-Hand Effect."
-#| out-height: "0.82\\textheight"
+#| out-height: "0.72\\textheight"
 #| out-width: "auto"
 #| fig-align: "center"
 
@@ -1537,16 +1536,15 @@ knitr::include_graphics("Top30SeasonsRotated.png")
 
 \clearpage
 
-#
+# Permutation Test Results for 30 Randomly Stratified Games
 
 ```{r}
 #| label: fig-stratified-games
 #| echo: false
 #| fig-cap: "Permutation Test Results for 30 Randomly Stratified Games."
-#| out-height: "0.82\\textheight"
+#| out-height: "0.72\\textheight"
 #| out-width: "auto"
 #| fig-align: "center"
 
 knitr::include_graphics("StratifiedGamesRotated.png")
 ```
-
